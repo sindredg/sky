@@ -1,12 +1,13 @@
 """Shared machinery for anything that rises and sets."""
 
 import math
+from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta, timezone, tzinfo
-from typing import Callable
+from datetime import UTC, date, datetime, timedelta, timezone, tzinfo
+from itertools import pairwise
 from zoneinfo import ZoneInfo
 
-_EPOCH = datetime(2000, 1, 1, 12, tzinfo=timezone.utc)
+_EPOCH = datetime(2000, 1, 1, 12, tzinfo=UTC)
 
 
 def days_since_j2000(when: datetime) -> float:
@@ -58,7 +59,7 @@ def sample_day(
 ) -> list[Sample]:
     """One altitude per step across the local day."""
     zone = as_timezone(tz)
-    start = datetime(day.year, day.month, day.day, tzinfo=zone).astimezone(timezone.utc)
+    start = datetime(day.year, day.month, day.day, tzinfo=zone).astimezone(UTC)
     steps = (24 * 60) // step_minutes
 
     return [
@@ -84,7 +85,7 @@ def crossings(
     rising = None
     falling = None
 
-    for first, second in zip(samples, samples[1:]):
+    for first, second in pairwise(samples):
         if first.altitude < threshold <= second.altitude and rising is None:
             rising = _interpolate(first, second, threshold)
         if first.altitude >= threshold > second.altitude:

@@ -7,7 +7,7 @@ the error a one minute sampling step already introduces into rise and set times.
 
 import math
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta, timezone, tzinfo
+from datetime import UTC, date, datetime, timedelta, tzinfo
 
 from . import sky
 
@@ -95,8 +95,12 @@ def position(when: datetime) -> Position:
     vw = math.radians(true_anomaly + perigee)
     i = math.radians(inclination)
 
-    xh = distance * (math.cos(n) * math.cos(vw) - math.sin(n) * math.sin(vw) * math.cos(i))
-    yh = distance * (math.sin(n) * math.cos(vw) + math.cos(n) * math.sin(vw) * math.cos(i))
+    xh = distance * (
+        math.cos(n) * math.cos(vw) - math.sin(n) * math.sin(vw) * math.cos(i)
+    )
+    yh = distance * (
+        math.sin(n) * math.cos(vw) + math.cos(n) * math.sin(vw) * math.cos(i)
+    )
     zh = distance * math.sin(vw) * math.sin(i)
 
     longitude = _norm(math.degrees(math.atan2(yh, xh)))
@@ -196,9 +200,7 @@ def day_events(
     rise, set_ = sky.crossings(samples, HORIZON)
     highest = max(samples, key=lambda s: s.altitude)
 
-    noon = datetime(day.year, day.month, day.day, 12, tzinfo=zone).astimezone(
-        timezone.utc
-    )
+    noon = datetime(day.year, day.month, day.day, 12, tzinfo=zone).astimezone(UTC)
     angle = elongation(noon)
 
     return {
@@ -219,7 +221,7 @@ def day_events(
 
 def _syzygies(start: date, days: int, target: float) -> list[datetime]:
     """Times when elongation passes through a target, scanning hour by hour."""
-    when = datetime(start.year, start.month, start.day, tzinfo=timezone.utc)
+    when = datetime(start.year, start.month, start.day, tzinfo=UTC)
     found = []
 
     previous = None
