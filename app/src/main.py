@@ -34,7 +34,7 @@ def _parse_day(value: str | None) -> date:
     try:
         return date.fromisoformat(value) if value else date.today()
     except ValueError:
-        raise HTTPException(status_code=400, detail="date must be YYYY-MM-DD")
+        raise HTTPException(status_code=400, detail="date must be YYYY-MM-DD") from None
 
 
 def _resolve(place, lat, lon, tz):

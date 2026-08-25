@@ -1,0 +1,12 @@
+line-length = 88
+target-version = "py312"
+
+[lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+# The formatter owns line length, so the lint rule would only duplicate it.
+ignore = ["E501"]
+
+[lint.per-file-ignores]
+# Tests reach for internals on purpose, and one asserts on a naive datetime.
+"app/tests/*" = ["B905"]

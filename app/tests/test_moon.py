@@ -1,6 +1,6 @@
 """Assertions against facts that hold regardless of our implementation."""
 
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 
 from app.src import moon
 
@@ -35,7 +35,7 @@ def test_synodic_month_is_about_twentynine_and_a_half_days():
 
 
 def test_illumination_always_between_zero_and_one():
-    when = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    when = datetime(2026, 1, 1, tzinfo=UTC)
     for hours in range(0, 24 * 40, 7):
         value = moon.illumination(when + timedelta(hours=hours))
         assert 0.0 <= value <= 1.0
@@ -62,7 +62,7 @@ def test_known_2026_eclipses_are_found():
     found = {
         (e["at"].date(), e["kind"]) for e in moon.eclipse_seasons(date(2026, 1, 1), 365)
     }
-    assert KNOWN_2026 <= found
+    assert found >= KNOWN_2026
 
 
 def test_no_eclipses_are_invented():
