@@ -25,7 +25,7 @@ the dates of solar and lunar eclipses.
 
 The bar across the top of the page is not decoration. Each stop is coloured from
 the sun's computed altitude at that minute, so the picture is the data. A day in
-Lofoten in June has no dark end. A day in Tromso in December has no bright one.
+Lofoten in June has no dark end. A day in Tromsø in December has no bright one.
 
 ## How it is built
 
