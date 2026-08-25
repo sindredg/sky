@@ -134,7 +134,6 @@ select, input[type="date"] {
 
 .ticks {
   display: grid;
-  grid-template-columns: repeat(8, 1fr);
   margin-top: 0.4rem;
   color: var(--faded);
   font-family: system-ui, sans-serif;
@@ -213,7 +212,25 @@ footer { margin-top: 4rem; padding-top: 1.5rem; border-top: 1px solid var(--rule
 }
 
 @media (max-width: 34rem) {
-  .moon { flex-direction: column; align-items: flex-start; gap: 1.5rem; }
-  select, input[type="date"] { min-width: 0; width: 100%; }
+  body { padding: 0 5vw 3rem; }
+
+  header { padding: 2.5rem 0 1.5rem; }
+
+  #theme { top: 2.5rem; }
+
+  #controls { gap: 1rem; }
+
   label { width: 100%; }
+
+  select, input[type="date"] { min-width: 0; width: 100%; }
+
+  .times dl, .moon dl { grid-template-columns: 1fr; gap: 0.15rem 0; }
+
+  .times dd, .moon dd { margin-bottom: 0.9rem; }
+
+  .moon { flex-direction: column; align-items: flex-start; gap: 1.5rem; }
+
+  .bar { height: 4rem; }
+
+  .verdict { font-size: 1.15rem; }
 }

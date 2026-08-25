@@ -30,10 +30,13 @@ function paintBar(curve) {
 }
 
 function paintTicks() {
-  const labels = ["00", "03", "06", "09", "12", "15", "18", "21"];
-  document.getElementById("ticks").innerHTML = labels
-    .map((h) => `<span>${h}</span>`)
-    .join("");
+  const narrow = window.matchMedia("(max-width: 34rem)").matches;
+  const labels = narrow
+    ? ["00", "06", "12", "18"]
+    : ["00", "03", "06", "09", "12", "15", "18", "21"];
+  const ticks = document.getElementById("ticks");
+  ticks.style.gridTemplateColumns = `repeat(${labels.length}, 1fr)`;
+  ticks.innerHTML = labels.map((h) => `<span>${h}</span>`).join("");
 }
 
 const clock = (iso) => (iso ? iso.slice(11, 16) : null);
@@ -137,6 +140,7 @@ function startTheme() {
 async function start() {
   startTheme();
   paintTicks();
+  matchMedia("(max-width: 34rem)").addEventListener("change", paintTicks);
 
   const places = await fetch("/api/places").then((r) => r.json());
   const select = document.getElementById("place");
