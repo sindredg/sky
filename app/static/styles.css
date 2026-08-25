@@ -1,9 +1,13 @@
 :root {
+  color-scheme: light dark;
   --paper: #f7f2e8;
   --ink: #191510;
   --faded: #6b6155;
   --rule: #ddd2be;
   --gold: #c8892f;
+  --moon-disc: #e3dac6;
+  --moon-lit: #23283f;
+  --edge: rgb(0 0 0 / 12%);
 
   --night: #10162c;
   --astronomical: #1b2547;
@@ -11,6 +15,31 @@
   --blue-hour: #435c93;
   --golden: #d99a45;
   --day: #ecd9ae;
+}
+
+/* The light bar keeps its own colours. They are data, not decoration. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #14120f;
+    --ink: #ece4d6;
+    --faded: #948a7c;
+    --rule: #302b23;
+    --gold: #e0a253;
+    --moon-disc: #2a2721;
+    --moon-lit: #f0e6d2;
+    --edge: rgb(255 255 255 / 14%);
+  }
+}
+
+:root[data-theme="dark"] {
+  --paper: #14120f;
+  --ink: #ece4d6;
+  --faded: #948a7c;
+  --rule: #302b23;
+  --gold: #e0a253;
+  --moon-disc: #2a2721;
+  --moon-lit: #f0e6d2;
+  --edge: rgb(255 255 255 / 14%);
 }
 
 * { box-sizing: border-box; }
@@ -64,7 +93,7 @@ select, input[type="date"] {
   padding: 0.45rem 0.6rem;
   border: 1px solid var(--rule);
   border-radius: 2px;
-  background: #fffdf8;
+  background: var(--paper);
   color: inherit;
   font: inherit;
   min-width: 14rem;
@@ -81,7 +110,7 @@ select, input[type="date"] {
 .bar {
   height: 5.5rem;
   border-radius: 2px;
-  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 12%);
+  box-shadow: inset 0 0 0 1px var(--edge);
 }
 
 .ticks {
@@ -134,8 +163,8 @@ dd {
 }
 
 .moon svg { width: 7rem; height: 7rem; flex: none; }
-.moon-dark { fill: #e3dac6; }
-.moon-lit { fill: #23283f; }
+.moon-dark { fill: var(--moon-disc); }
+.moon-lit { fill: var(--moon-lit); }
 .moon dl { margin: 0; }
 
 .eclipses {
