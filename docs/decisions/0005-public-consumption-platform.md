@@ -7,6 +7,13 @@ environment with its built-in Consumption profile. It has no VNet. Golden Hour
 is a public stateless service with no private dependency, so a VNet would add
 cost and prevent a GitHub-hosted runner from reaching the app for a smoke test.
 
+The workload profile is declared explicitly. An environment created without one
+is the legacy Consumption-only type, which cannot gain profiles later and must
+be destroyed and recreated, taking the container app and its public hostname
+with it. The Consumption profile costs nothing while no app runs on it, so the
+declaration buys the upgrade path for free. Do not remove the block as
+redundant.
+
 The platform state owns the production resource group, Standard container
 registry, 30-day Log Analytics workspace, and Container Apps environment. The
 application and its ingress stay in a separate release state.

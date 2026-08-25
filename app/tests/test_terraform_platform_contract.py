@@ -42,6 +42,7 @@ def test_platform_resources_match_public_consumption_boundary():
     assert "retention_in_days   = local.config.log_retention_days" in main
     assert 'resource "azurerm_container_app_environment" "this"' in main
     assert "log_analytics_workspace_id" in main
+    assert re.search(r'logs_destination\s*=\s*"log-analytics"', main)
     assert 'location           = "norwayeast"' in locals_tf
     assert "log_retention_days = 30" in locals_tf
     assert re.search(r'environment\s*=\s*"production"', locals_tf)
@@ -77,3 +78,20 @@ def test_platform_has_no_runtime_or_authority_resources():
     assert not UUID.search(tracked_text)
     assert not list(PLATFORM.rglob("*.tfstate"))
     assert not list(PLATFORM.rglob("*.tfplan"))
+
+
+def test_environment_links_its_workspace_instead_of_only_streaming_logs():
+    main = read("main.tf")
+
+    # Omitting logs_destination streams logs and silently ignores the workspace.
+    assert "log_analytics_workspace_id" in main
+    assert re.search(r'logs_destination\s*=\s*"log-analytics"', main)
+
+
+def test_environment_is_created_with_a_workload_profile():
+    main = read("main.tf")
+
+    # The environment type is fixed at creation and cannot be converted later.
+    assert re.search(r"workload_profile\s*{", main)
+    assert re.search(r'name\s*=\s*"Consumption"', main)
+    assert re.search(r'workload_profile_type\s*=\s*"Consumption"', main)
