@@ -32,3 +32,8 @@ __pycache__/
 .vscode/
 .idea/
 .DS_Store
+
+# AI Agents
+CLAUDE.md
+AGENTS.md
+CONTEXT.md
