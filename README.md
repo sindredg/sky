@@ -60,8 +60,8 @@ visibility require full ephemerides and are outside the current scope.
 
 ## Deployment status
 
-The application and single-container runtime are implemented. Terraform and the
-Azure deployment pipeline are next. Nothing is deployed yet.
+The application, container runtime, and Terraform bootstrap are implemented.
+The Azure platform foundation is pending review. Nothing is deployed yet.
 
 Architecture decisions and rejected alternatives are recorded in
 [docs/decisions](docs/decisions/).
