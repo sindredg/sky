@@ -108,7 +108,34 @@ async function load() {
   ]);
 }
 
+function applyTheme(theme) {
+  const button = document.getElementById("theme");
+  if (theme) {
+    document.documentElement.dataset.theme = theme;
+  } else {
+    delete document.documentElement.dataset.theme;
+  }
+  const dark = theme
+    ? theme === "dark"
+    : matchMedia("(prefers-color-scheme: dark)").matches;
+  button.textContent = dark ? "Light" : "Dark";
+  button.setAttribute("aria-pressed", String(dark));
+}
+
+function startTheme() {
+  applyTheme(localStorage.getItem("theme"));
+  document.getElementById("theme").addEventListener("click", () => {
+    const dark = document.documentElement.dataset.theme
+      ? document.documentElement.dataset.theme === "dark"
+      : matchMedia("(prefers-color-scheme: dark)").matches;
+    const next = dark ? "light" : "dark";
+    localStorage.setItem("theme", next);
+    applyTheme(next);
+  });
+}
+
 async function start() {
+  startTheme();
   paintTicks();
 
   const places = await fetch("/api/places").then((r) => r.json());
