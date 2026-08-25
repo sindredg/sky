@@ -1,0 +1,34 @@
+# Terraform runtime
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+crash.*.log
+
+# Local overrides
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Secret or machine local variables only. Environment tfvars are tracked on
+# purpose, so an environment can be read from the repository.
+*.secret.tfvars
+*.local.tfvars
+
+# Credentials
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+.pytest_cache/
+.venv/
+*.pyc
+
+# Editors
+.vscode/
+.idea/
+.DS_Store
