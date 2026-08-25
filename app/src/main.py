@@ -6,7 +6,8 @@ from datetime import date, datetime
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import PlainTextResponse
 
-from . import solar
+from . import moon as lunar
+from . import sun
 from .places import BY_SLUG, PLACES
 
 SERVICE_VERSION = os.getenv("SERVICE_VERSION", "0.0.0-local")
@@ -29,6 +30,25 @@ def _window(pair):
     return {"start": _iso(start), "end": _iso(end)}
 
 
+def _parse_day(value: str | None) -> date:
+    try:
+        return date.fromisoformat(value) if value else date.today()
+    except ValueError:
+        raise HTTPException(status_code=400, detail="date must be YYYY-MM-DD")
+
+
+def _resolve(place, lat, lon, tz):
+    """A named place carries its own timezone; a bare coordinate cannot."""
+    if place is not None:
+        found = BY_SLUG.get(place)
+        if found is None:
+            raise HTTPException(status_code=404, detail="unknown place")
+        return found.latitude, found.longitude, found.timezone, found.name
+    if lat is not None and lon is not None:
+        return lat, lon, tz, "custom location"
+    raise HTTPException(status_code=400, detail="supply place, or lat and lon")
+
+
 @app.get("/health", response_class=PlainTextResponse)
 async def health() -> str:
     return "healthy\n"
@@ -49,6 +69,7 @@ async def list_places() -> dict:
                 "country": p.country,
                 "latitude": p.latitude,
                 "longitude": p.longitude,
+                "timezone": p.timezone,
                 "note": p.note,
             }
             for p in PLACES
@@ -64,27 +85,9 @@ async def light(
     on: str | None = None,
     tz: float = Query(0.0, ge=-12, le=14),
 ) -> dict:
-    if place is not None:
-        found = BY_SLUG.get(place)
-        if found is None:
-            raise HTTPException(status_code=404, detail="unknown place")
-        latitude, longitude, zone, label = (
-            found.latitude,
-            found.longitude,
-            found.timezone,
-            found.name,
-        )
-    elif lat is not None and lon is not None:
-        latitude, longitude, zone, label = lat, lon, tz, "custom location"
-    else:
-        raise HTTPException(status_code=400, detail="supply place, or lat and lon")
-
-    try:
-        day = date.fromisoformat(on) if on else date.today()
-    except ValueError:
-        raise HTTPException(status_code=400, detail="on must be YYYY-MM-DD")
-
-    events = solar.day_events(day, latitude, longitude, zone)
+    latitude, longitude, zone, label = _resolve(place, lat, lon, tz)
+    day = _parse_day(on)
+    events = sun.day_events(day, latitude, longitude, zone)
 
     return {
         "location": label,
@@ -108,4 +111,56 @@ async def light(
         "midnight_sun": events["midnight_sun"],
         "polar_night": events["polar_night"],
         "daylight_minutes": events["daylight_minutes"],
+    }
+
+
+@app.get("/api/moon")
+async def moon(
+    place: str | None = None,
+    lat: float | None = Query(None, ge=-90, le=90),
+    lon: float | None = Query(None, ge=-180, le=180),
+    on: str | None = None,
+    tz: float = Query(0.0, ge=-12, le=14),
+) -> dict:
+    latitude, longitude, zone, label = _resolve(place, lat, lon, tz)
+    day = _parse_day(on)
+    events = lunar.day_events(day, latitude, longitude, zone)
+
+    return {
+        "location": label,
+        "date": day.isoformat(),
+        "timezone": str(zone),
+        "moonrise": _iso(events["moonrise"]),
+        "moonset": _iso(events["moonset"]),
+        "highest": {
+            "at": _iso(events["highest"]["at"]),
+            "altitude": events["highest"]["altitude"],
+        },
+        "always_up": events["always_up"],
+        "never_up": events["never_up"],
+        "phase": events["phase"],
+        "phase_angle": events["phase_angle"],
+        "illumination": events["illumination"],
+        "age_days": events["age_days"],
+    }
+
+
+@app.get("/api/eclipses")
+async def eclipses(
+    since: str | None = None, days: int = Query(400, ge=1, le=1100)
+) -> dict:
+    start = _parse_day(since)
+
+    return {
+        "from": start.isoformat(),
+        "days": days,
+        "note": "Occurrence only. Path and local visibility need full ephemerides.",
+        "eclipses": [
+            {
+                "at": event["at"].isoformat(timespec="minutes"),
+                "kind": event["kind"],
+                "moon_latitude": event["moon_latitude"],
+            }
+            for event in lunar.eclipse_seasons(start, days)
+        ],
     }

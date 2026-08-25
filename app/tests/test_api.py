@@ -42,3 +42,24 @@ def test_place_reports_its_timezone():
     body = client.get("/api/light?place=tromso&on=2026-12-21").json()
     assert body["timezone"] == "Europe/Oslo"
     assert body["polar_night"] is True
+
+
+def test_moon_endpoint_reports_a_phase():
+    body = client.get("/api/moon?place=lofoten&on=2026-03-03").json()
+    assert body["phase"] == "full moon"
+    assert body["illumination"] > 0.99
+
+
+def test_moon_endpoint_rejects_unknown_place():
+    assert client.get("/api/moon?place=atlantis").status_code == 404
+
+
+def test_eclipses_endpoint_finds_the_2026_pair():
+    body = client.get("/api/eclipses?since=2026-01-01&days=365").json()
+    dates = {(e["at"][:10], e["kind"]) for e in body["eclipses"]}
+    assert ("2026-08-12", "solar") in dates
+    assert ("2026-03-03", "lunar") in dates
+
+
+def test_eclipses_window_is_capped():
+    assert client.get("/api/eclipses?days=99999").status_code == 422
