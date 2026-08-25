@@ -50,16 +50,38 @@ the reasoning at length. This one is built to be reused.
 
 ## Running it
 
+### Python
+
     python3 -m venv .venv
     .venv/bin/pip install -r app/requirements-dev.txt
     .venv/bin/python -m pytest app/tests -q
-    .venv/bin/uvicorn app.src.main:app --reload --port 8080
+    .venv/bin/uvicorn app.src.main:app --reload --port 8123
 
-Then open http://localhost:8080, or ask the API directly:
+Open http://localhost:8123, or ask the API directly:
 
-    curl 'localhost:8080/api/light?place=lofoten&on=2026-06-21'
-    curl 'localhost:8080/api/moon?place=tromso'
-    curl 'localhost:8080/api/eclipses?days=900'
+    curl 'localhost:8123/api/light?place=lofoten&on=2026-06-21'
+    curl 'localhost:8123/api/moon?place=tromso'
+    curl 'localhost:8123/api/eclipses?days=900'
+
+### Docker
+
+    docker compose up --build --wait
+
+Open http://localhost:8123. The container serves the website and its internal
+API from the same FastAPI process.
+
+Set another host port or version without editing Compose:
+
+    GOLDEN_HOUR_PORT=9123 SERVICE_VERSION=0.1.0-local \
+      docker compose up --build --wait
+
+Stop and remove the local container and network:
+
+    docker compose down
+
+Run the complete container contract:
+
+    scripts/container-smoke.sh
 
 ## Accuracy
 
@@ -78,8 +100,8 @@ published decades in advance.
 
 ## Status
 
-The application, its tests and the site exist. Terraform is next, and nothing is
-deployed yet.
+The application, tests, website and single-container local runtime exist.
+Terraform and the Azure deployment pipeline are next. Nothing is deployed yet.
 
 ## Decisions
 
