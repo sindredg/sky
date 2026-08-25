@@ -95,3 +95,7 @@ def test_southern_daylight_saving_also_inverts():
     december = sun.day_events(DECEMBER, -50.9423, -73.4068, tz="America/Santiago")
     assert june["sunrise"].utcoffset().total_seconds() == -4 * 3600
     assert december["sunrise"].utcoffset().total_seconds() == -3 * 3600
+
+
+def test_deliberately_failing():
+    assert False
