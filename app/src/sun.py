@@ -12,6 +12,9 @@ GOLDEN_UPPER = 6.0
 GOLDEN_LOWER = -4.0
 BLUE_LOWER = -6.0
 
+# Enough points to draw a smooth gradient without shipping 1440 numbers.
+CURVE_STEP_MINUTES = 10
+
 
 def altitude(when: datetime, latitude: float, longitude: float) -> float:
     """Altitude of the sun in degrees above the horizon."""
@@ -67,4 +70,6 @@ def day_events(
         "midnight_sun": lowest.altitude > HORIZON,
         "polar_night": highest.altitude < HORIZON,
         "daylight_minutes": sum(1 for s in samples[:-1] if s.altitude > HORIZON),
+        "curve": [round(s.altitude, 2) for s in samples[::CURVE_STEP_MINUTES]],
+        "curve_step_minutes": CURVE_STEP_MINUTES,
     }

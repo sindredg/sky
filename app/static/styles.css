@@ -1,0 +1,171 @@
+:root {
+  --paper: #f7f2e8;
+  --ink: #191510;
+  --faded: #6b6155;
+  --rule: #ddd2be;
+  --gold: #c8892f;
+
+  --night: #10162c;
+  --astronomical: #1b2547;
+  --nautical: #2b3a68;
+  --blue-hour: #435c93;
+  --golden: #d99a45;
+  --day: #ecd9ae;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 0 6vw 5rem;
+  background: var(--paper);
+  color: var(--ink);
+  font: 1rem/1.6 "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+}
+
+header { padding: 4.5rem 0 2.5rem; }
+
+h1 {
+  margin: 0;
+  font-size: clamp(2.6rem, 7vw, 4.4rem);
+  font-weight: 400;
+  letter-spacing: -0.02em;
+}
+
+.strap {
+  margin: 0.4rem 0 0;
+  color: var(--faded);
+  font-style: italic;
+  font-size: 1.15rem;
+}
+
+main { max-width: 62rem; }
+
+#controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  padding: 1.25rem 0;
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+}
+
+label { display: flex; flex-direction: column; gap: 0.3rem; }
+
+label span {
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--faded);
+  font-family: system-ui, sans-serif;
+}
+
+select, input[type="date"] {
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  background: #fffdf8;
+  color: inherit;
+  font: inherit;
+  min-width: 14rem;
+}
+
+.note {
+  margin: 1.25rem 0 0;
+  color: var(--faded);
+  font-style: italic;
+}
+
+.light { margin: 2.5rem 0 0; }
+
+.bar {
+  height: 5.5rem;
+  border-radius: 2px;
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 12%);
+}
+
+.ticks {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  margin-top: 0.4rem;
+  color: var(--faded);
+  font-family: system-ui, sans-serif;
+  font-size: 0.7rem;
+}
+
+.ticks span:not(:first-child) { text-align: center; }
+.ticks span:last-child { text-align: right; }
+
+.verdict {
+  margin: 1.5rem 0 0;
+  font-size: 1.3rem;
+  line-height: 1.45;
+}
+
+.verdict b { color: var(--gold); font-weight: 400; }
+
+.times dl, .moon dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.5rem 1.75rem;
+  margin: 2.5rem 0 0;
+}
+
+dt {
+  color: var(--faded);
+  font-family: system-ui, sans-serif;
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+}
+
+dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  font-size: 1.05rem;
+}
+
+.moon {
+  display: flex;
+  align-items: center;
+  gap: 2.5rem;
+  margin-top: 3rem;
+  padding-top: 2.5rem;
+  border-top: 1px solid var(--rule);
+}
+
+.moon svg { width: 7rem; height: 7rem; flex: none; }
+.moon-dark { fill: #e3dac6; }
+.moon-lit { fill: #23283f; }
+.moon dl { margin: 0; }
+
+.eclipses {
+  margin-top: 3rem;
+  padding-top: 2.5rem;
+  border-top: 1px solid var(--rule);
+}
+
+h2 { font-size: 1.1rem; font-weight: 400; margin: 0 0 1rem; }
+
+.eclipses ol { margin: 0; padding-left: 1.1rem; }
+.eclipses li { margin-bottom: 0.35rem; font-variant-numeric: tabular-nums; }
+
+.caveat, footer p {
+  color: var(--faded);
+  font-size: 0.85rem;
+  font-style: italic;
+}
+
+footer { margin-top: 4rem; padding-top: 1.5rem; border-top: 1px solid var(--rule); }
+
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+@media (max-width: 34rem) {
+  .moon { flex-direction: column; align-items: flex-start; gap: 1.5rem; }
+  select, input[type="date"] { min-width: 0; width: 100%; }
+  label { width: 100%; }
+}
