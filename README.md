@@ -3,7 +3,7 @@
 Sunrise, sunset, golden hour and blue hour for places worth photographing,
 including the ones where the sun does not rise or set at all.
 
-Ask about Reine in June and it reports that the sun never sets. Ask about Tromso
+Ask about Reine in June and it reports that the sun never sets. Ask about Tromsø
 in December and it reports polar night, and when the sky is nearest to bright
 anyway.
 
@@ -25,7 +25,7 @@ the dates of solar and lunar eclipses.
 
 The bar across the top of the page is not decoration. Each stop is coloured from
 the sun's computed altitude at that minute, so the picture is the data. A day in
-Lofoten in June has no dark end. A day in Tromso in December has no bright one.
+Lofoten in June has no dark end. A day in Tromsø in December has no bright one.
 
 ## How it is built
 

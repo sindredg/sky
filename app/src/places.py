@@ -52,8 +52,17 @@ PLACES: tuple[Place, ...] = (
         "Steep walls mean the sun leaves the water long before it sets.",
     ),
     Place(
+        "alesund",
+        "Ålesund",
+        "Norway",
+        62.4722,
+        6.1495,
+        "Europe/Oslo",
+        "The view from Aksla faces west over the islands, so the town is backlit at sunset.",
+    ),
+    Place(
         "tromso",
-        "Tromso",
+        "Tromsø",
         "Norway",
         69.6492,
         18.9553,
