@@ -36,3 +36,9 @@ def test_bad_date_is_400():
 
 def test_latitude_out_of_range_is_422():
     assert client.get("/api/light?lat=100&lon=0").status_code == 422
+
+
+def test_place_reports_its_timezone():
+    body = client.get("/api/light?place=tromso&on=2026-12-21").json()
+    assert body["timezone"] == "Europe/Oslo"
+    assert body["polar_night"] is True

@@ -68,14 +68,14 @@ async def light(
         found = BY_SLUG.get(place)
         if found is None:
             raise HTTPException(status_code=404, detail="unknown place")
-        latitude, longitude, offset, label = (
+        latitude, longitude, zone, label = (
             found.latitude,
             found.longitude,
-            found.utc_offset_hours,
+            found.timezone,
             found.name,
         )
     elif lat is not None and lon is not None:
-        latitude, longitude, offset, label = lat, lon, tz, "custom location"
+        latitude, longitude, zone, label = lat, lon, tz, "custom location"
     else:
         raise HTTPException(status_code=400, detail="supply place, or lat and lon")
 
@@ -84,14 +84,14 @@ async def light(
     except ValueError:
         raise HTTPException(status_code=400, detail="on must be YYYY-MM-DD")
 
-    events = solar.day_events(day, latitude, longitude, offset)
+    events = solar.day_events(day, latitude, longitude, zone)
 
     return {
         "location": label,
         "date": day.isoformat(),
         "latitude": latitude,
         "longitude": longitude,
-        "utc_offset_hours": offset,
+        "timezone": str(zone),
         "sunrise": _iso(events["sunrise"]),
         "sunset": _iso(events["sunset"]),
         "golden_hour_morning": _window(events["golden_hour_morning"]),

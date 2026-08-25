@@ -2,7 +2,8 @@
 
 import math
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone, tzinfo
+from zoneinfo import ZoneInfo
 
 # Refraction plus the sun's apparent radius, so the event is the visible edge.
 HORIZON = -0.833
@@ -60,18 +61,26 @@ class Sample:
     altitude: float
 
 
+def as_timezone(tz: str | float | tzinfo) -> tzinfo:
+    """An IANA name, or a fixed offset in hours for a bare coordinate."""
+    if isinstance(tz, str):
+        return ZoneInfo(tz)
+    if isinstance(tz, (int, float)):
+        return timezone(timedelta(hours=tz))
+    return tz
+
+
 def sample_day(
-    day: date, latitude: float, longitude: float, utc_offset_hours: float = 0.0
+    day: date, latitude: float, longitude: float, tz: str | float | tzinfo = 0.0
 ) -> list[Sample]:
     """One altitude per minute across the local day."""
-    local_midnight = datetime(
-        day.year, day.month, day.day, tzinfo=timezone.utc
-    ) - timedelta(hours=utc_offset_hours)
+    zone = as_timezone(tz)
+    start = datetime(day.year, day.month, day.day, tzinfo=zone).astimezone(timezone.utc)
 
     return [
         Sample(
-            local_midnight + timedelta(minutes=m),
-            solar_altitude(local_midnight + timedelta(minutes=m), latitude, longitude),
+            start + timedelta(minutes=m),
+            solar_altitude(start + timedelta(minutes=m), latitude, longitude),
         )
         for m in range(1441)
     ]
@@ -99,18 +108,19 @@ def _interpolate(first: Sample, second: Sample, threshold: float) -> datetime:
     return first.at + (second.at - first.at) * fraction
 
 
-def _local(value: datetime | None, utc_offset_hours: float) -> datetime | None:
+def _local(value: datetime | None, zone: tzinfo) -> datetime | None:
     """Events are computed in UTC and reported where the observer stands."""
     if value is None:
         return None
-    return value.astimezone(timezone(timedelta(hours=utc_offset_hours)))
+    return value.astimezone(zone)
 
 
 def day_events(
-    day: date, latitude: float, longitude: float, utc_offset_hours: float = 0.0
+    day: date, latitude: float, longitude: float, tz: str | float | tzinfo = 0.0
 ) -> dict:
     """Daylight events for one local day, including the polar cases."""
-    samples = sample_day(day, latitude, longitude, utc_offset_hours)
+    zone = as_timezone(tz)
+    samples = sample_day(day, latitude, longitude, zone)
 
     highest = max(samples, key=lambda s: s.altitude)
     lowest = min(samples, key=lambda s: s.altitude)
@@ -126,7 +136,7 @@ def day_events(
     daylight = sum(1 for s in samples[:-1] if s.altitude > HORIZON)
 
     def here(value):
-        return _local(value, utc_offset_hours)
+        return _local(value, zone)
 
     return {
         "sunrise": here(sunrise),
