@@ -2,9 +2,11 @@
 
 import os
 from datetime import date, datetime
+from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Query
-from fastapi.responses import PlainTextResponse
+from fastapi.responses import FileResponse, PlainTextResponse
+from fastapi.staticfiles import StaticFiles
 
 from . import moon as lunar
 from . import sun
@@ -111,6 +113,8 @@ async def light(
         "midnight_sun": events["midnight_sun"],
         "polar_night": events["polar_night"],
         "daylight_minutes": events["daylight_minutes"],
+        "curve": events["curve"],
+        "curve_step_minutes": events["curve_step_minutes"],
     }
 
 
@@ -164,3 +168,14 @@ async def eclipses(
             for event in lunar.eclipse_seasons(start, days)
         ],
     }
+
+
+STATIC = Path(__file__).parent.parent / "static"
+
+
+@app.get("/")
+async def index() -> FileResponse:
+    return FileResponse(STATIC / "index.html")
+
+
+app.mount("/static", StaticFiles(directory=STATIC), name="static")

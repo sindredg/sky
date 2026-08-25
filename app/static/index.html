@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Golden Hour</title>
+<link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+
+<header>
+  <h1>Golden&nbsp;Hour</h1>
+  <p class="strap">When the light is worth the walk.</p>
+</header>
+
+<main>
+  <form id="controls" autocomplete="off">
+    <label>
+      <span>Place</span>
+      <select id="place"></select>
+    </label>
+    <label>
+      <span>Date</span>
+      <input id="date" type="date">
+    </label>
+  </form>
+
+  <p id="note" class="note"></p>
+
+  <section class="light" aria-labelledby="light-heading">
+    <h2 id="light-heading" class="sr-only">The day in light</h2>
+    <div id="bar" class="bar" role="img" aria-label="The day coloured by the sun's altitude"></div>
+    <div id="ticks" class="ticks"></div>
+    <p id="verdict" class="verdict"></p>
+  </section>
+
+  <section class="times">
+    <dl id="times"></dl>
+  </section>
+
+  <section class="moon">
+    <svg id="moon" viewBox="-60 -60 120 120" aria-hidden="true">
+      <circle cx="0" cy="0" r="50" class="moon-dark"/>
+      <path id="moon-lit" class="moon-lit" d=""/>
+    </svg>
+    <dl id="moon-facts"></dl>
+  </section>
+
+  <section class="eclipses">
+    <h2>Coming eclipses</h2>
+    <ol id="eclipses"></ol>
+    <p class="caveat">Occurrence only. Whether one is visible from a given place
+      needs full ephemerides, which this does not attempt.</p>
+  </section>
+</main>
+
+<footer>
+  <p>Positions are computed, never fetched. Same question, same answer, forever.</p>
+</footer>
+
+<script src="/static/app.js" defer></script>
+</body>
+</html>
