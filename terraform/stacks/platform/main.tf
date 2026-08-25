@@ -28,6 +28,13 @@ resource "azurerm_container_app_environment" "this" {
   name                       = local.names.container_app_environment
   resource_group_name        = azurerm_resource_group.this.name
   location                   = azurerm_resource_group.this.location
+  logs_destination           = "log-analytics"
   log_analytics_workspace_id = azurerm_log_analytics_workspace.this.id
   tags                       = local.common_tags
+
+  # The environment type is fixed at creation, so this cannot be added later.
+  workload_profile {
+    name                  = "Consumption"
+    workload_profile_type = "Consumption"
+  }
 }
