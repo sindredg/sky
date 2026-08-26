@@ -1,4 +1,4 @@
-FROM python:3.12.14-slim-bookworm@sha256:b64e9d3a71eddaa1b3f80c04abf292b3139e3b7c4dd272d19c31dc1f91194d1b
+FROM python:3.14.6-slim-bookworm@sha256:4c92ffcde4dd6f1ff72a24518f49fd4990b27134987dfa31a733badde66df9f8
 
 # The release passes the commit SHA so a replica can report its own build.
 ARG SERVICE_VERSION=0.0.0-local
