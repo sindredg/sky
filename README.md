@@ -2,9 +2,14 @@
 
 **[See it running](https://ca-aca-prod-production.yellowglacier-15588c53.norwayeast.azurecontainerapps.io)**
 
-Golden Hour is a FastAPI application that calculates sunlight and moon data for
-17 places. It handles midnight sun and polar night by sampling altitude once
-per minute instead of assuming the sun crosses the horizon.
+This repository demonstrates a production-oriented delivery pipeline for Azure
+Container Apps. Golden Hour is deliberately the vehicle: a small FastAPI
+workload used to exercise infrastructure, identity, build, deployment,
+verification, and monitoring end to end.
+
+The application calculates sunlight and moon data for 17 places. It handles
+midnight sun and polar night by sampling altitude once per minute instead of
+assuming the sun crosses the horizon.
 
 Calculations run locally. The application has no external API or database.
 
