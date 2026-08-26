@@ -1,0 +1,106 @@
+name: release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - 'Dockerfile'
+      - '.dockerignore'
+      - 'terraform/stacks/application/**'
+      - '.github/workflows/release.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Serialises releases so two runs cannot race the state lock or the revision.
+concurrency:
+  group: release-production
+  cancel-in-progress: false
+
+env:
+  REGISTRY: acracaprod1345665076
+  REPOSITORY: goldenhour
+
+jobs:
+  build:
+    name: build and push
+    runs-on: ubuntu-latest
+
+    # No environment: pushing an image changes nothing that serves traffic.
+    permissions:
+      contents: read
+      id-token: write
+
+    outputs:
+      digest: ${{ steps.image.outputs.digest }}
+
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - uses: azure/login@7184910d9eb2b1c5e48f7073824a90609bb9b6d6 # v2.3.1
+        with:
+          client-id: ${{ vars.AZURE_PUSH_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: sign in to the registry
+        run: az acr login --name "$REGISTRY"
+
+      - name: build, push and resolve the digest
+        id: image
+        shell: bash
+        run: |
+          set -euo pipefail
+          reference="$REGISTRY.azurecr.io/$REPOSITORY:$GITHUB_SHA"
+
+          # The commit already has an image when only Terraform changed.
+          if docker manifest inspect "$reference" > /dev/null 2>&1; then
+            echo "reusing the existing image for $GITHUB_SHA"
+          else
+            docker build --tag "$reference" .
+            docker push "$reference"
+          fi
+
+          digest=$(docker manifest inspect --verbose "$reference" | jq -r '.Descriptor.digest')
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+          echo "resolved $reference to $digest"
+
+  deploy:
+    name: deploy
+    needs: build
+    runs-on: ubuntu-latest
+    environment: production
+
+    permissions:
+      contents: read
+      id-token: write
+
+    env:
+      ARM_USE_OIDC: true
+      ARM_CLIENT_ID: ${{ vars.AZURE_DEPLOY_CLIENT_ID }}
+      ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: 1.15.8
+          terraform_wrapper: false
+
+      - name: initialize
+        run: >-
+          terraform -chdir=terraform/stacks/application init
+          -backend-config=backend.hcl -input=false
+
+      - name: apply
+        run: >-
+          terraform -chdir=terraform/stacks/application apply -input=false -no-color
+          -auto-approve -var=image_digest=${{ needs.build.outputs.digest }}
+
+      - name: report the deployed revision
+        run: >-
+          terraform -chdir=terraform/stacks/application output -raw application_url
