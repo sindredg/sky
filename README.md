@@ -13,7 +13,7 @@ infrastructure, identity, build, deployment, verification and monitoring: there
 is nothing in the application that can rot, so when something breaks it is the
 pipeline.
 
-The application calculates sunlight and moon data for 17 places. It handles
+The application calculates sunlight and moon data for 23 places. It handles
 midnight sun and polar night by sampling altitude once per minute instead of
 assuming the sun crosses the horizon.
 
