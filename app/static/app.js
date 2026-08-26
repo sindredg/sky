@@ -129,21 +129,45 @@ function moonPath(fraction, waxing, radius) {
 
 
 // The galactic centre is fixed, so the answer is latitude, season and moon.
+// The plain sentence comes first; the figures stay underneath it.
+function howHigh(degrees) {
+  if (degrees > 70) return "almost overhead";
+  if (degrees > 40) return "high in the sky";
+  if (degrees > 20) return "well up";
+  return "low, just clear of the horizon";
+}
+
+function moonSays(lit) {
+  if (lit < 0.1) return "The moon is new, so the sky is properly dark.";
+  if (lit < 0.4) return `A thin ${Math.round(lit * 100)}% moon leaves the sky mostly dark.`;
+  return `A bright ${Math.round(lit * 100)}% moon drowns it out.`;
+}
+
 function describeCore(core) {
-  const span = (w) => `<b>${clock(w.start)}</b> and <b>${clock(w.end)}</b>`;
-  const lit = Math.round(core.moon.illumination * 100);
+  const from = `<b>${clock(core.window && core.window.start)}</b>`;
+  const to = `<b>${clock(core.window && core.window.end)}</b>`;
+  const south = core.visible_south_of;
 
   switch (core.reason) {
     case "never_rises":
-      return "The core never clears the horizon at this latitude.";
+      return `<b>Not from here.</b> The bright centre of the Milky Way never climbs above the
+        horizon this far north. You would have to get south of about ${Math.round(south + 10)}\u00b0
+        of latitude to see it at all.`;
     case "too_low":
-      return `The core only reaches ${core.peak_altitude}\u00b0 here, too low to see through the atmosphere.`;
+      return `<b>Too low here.</b> The centre of the Milky Way only just clears the horizon,
+        reaching ${core.peak_altitude}\u00b0, so there is too much atmosphere in the way.
+        South of about ${Math.round(south)}\u00b0 it climbs high enough to photograph.`;
     case "no_astronomical_darkness":
-      return "The sky never gets fully dark tonight, so the core stays hidden.";
+      return `<b>Not tonight.</b> The sky never gets fully dark at this time of year, so the
+        Milky Way stays washed out even though it is above the horizon.`;
     case "moon_washes_it_out":
-      return `The core is up between ${span(core.window)}, but a ${lit}% moon washes it out.`;
+      return `<b>Wait for a darker night.</b> The centre of the Milky Way is up between ${from}
+        and ${to}, ${howHigh(core.peak_altitude)} toward the ${core.direction.compass}.
+        ${moonSays(core.moon.illumination)}`;
     default:
-      return `The core is high in dark sky between ${span(core.window)}.`;
+      return `<b>Good tonight.</b> The bright centre of the Milky Way sits
+        ${howHigh(core.peak_altitude)}, toward the <b>${core.direction.compass}</b>,
+        from ${from} until ${to}. ${moonSays(core.moon.illumination)}`;
   }
 }
 
@@ -179,11 +203,17 @@ async function load() {
     .setAttribute("d", moonPath(moon.illumination, waxing, 50));
 
   document.getElementById("milkyway-verdict").innerHTML = describeCore(core);
-  rows("milkyway-facts", [
-    ["Highest tonight", `${core.peak_altitude}\u00b0`],
-    ["Best this latitude can do", `${core.highest_possible_altitude}\u00b0`],
-    ["Moon", `${Math.round(core.moon.illumination * 100)}% lit`],
-  ]);
+  rows(
+    "milkyway-facts",
+    [
+      ["Highest tonight", `${core.peak_altitude}\u00b0 above the horizon`],
+      ["Best this latitude can do", `${core.highest_possible_altitude}\u00b0`],
+      core.direction
+        ? ["Highest at", `${clock(core.direction.highest_at)}, ${core.direction.compass}`]
+        : null,
+      ["Moon", `${Math.round(core.moon.illumination * 100)}% lit`],
+    ].filter(Boolean),
+  );
 
   rows("moon-facts", [
     ["Phase", moon.phase],

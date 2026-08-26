@@ -28,6 +28,31 @@ def altitude(when: datetime, latitude: float, longitude: float) -> float:
     )
 
 
+_COMPASS = (
+    "north",
+    "north east",
+    "east",
+    "south east",
+    "south",
+    "south west",
+    "west",
+    "north west",
+)
+
+
+def compass_point(azimuth: float) -> str:
+    """Azimuth in degrees from north, as a direction a person can face."""
+    return _COMPASS[round(azimuth / 45.0) % 8]
+
+
+def latitude_limit(minimum_altitude: float = USABLE_ALTITUDE) -> float:
+    """The furthest north the core still climbs to a given altitude.
+
+    From the same identity as peak_altitude: 90 - |latitude - declination|.
+    """
+    return DECLINATION_DEGREES + 90.0 - minimum_altitude
+
+
 def peak_altitude(latitude: float) -> float:
     """The most the core can ever reach here, whatever the date."""
     return 90.0 - abs(latitude - DECLINATION_DEGREES)
@@ -75,6 +100,8 @@ def core_window(
         "window": None,
         "reason": None,
         "moon": {"illumination": round(lit, 3), "above_horizon": False},
+        "direction": None,
+        "visible_south_of": round(latitude_limit(), 1),
     }
 
     if result["peak_altitude"] <= 0:
@@ -106,6 +133,17 @@ def core_window(
     during = core[first : last + 1]
     up = sum(1 for s in during if moon.altitude(s.at, latitude, longitude) > 0)
     result["moon"]["above_horizon"] = up > len(during) / 2
+
+    # Where to face, taken at the middle of the window.
+    middle = during[len(during) // 2]
+    _, azimuth = sky.equatorial_to_horizontal(
+        middle.at, _RIGHT_ASCENSION, _DECLINATION, latitude, longitude
+    )
+    result["direction"] = {
+        "azimuth": round(azimuth, 1),
+        "compass": compass_point(azimuth),
+        "highest_at": sky.local(middle.at, zone),
+    }
 
     # The window is still reported when the moon spoils it, because knowing
     # when it would have been is the useful part.
