@@ -78,14 +78,17 @@ function paintBar(curve) {
     `linear-gradient(to right, ${stops.join(", ")})`;
 }
 
+// Each label sits on its own hour. Equal columns would centre it half a column late.
 function paintTicks() {
   const narrow = window.matchMedia("(max-width: 34rem)").matches;
-  const labels = narrow
-    ? ["00", "06", "12", "18"]
-    : ["00", "03", "06", "09", "12", "15", "18", "21"];
+  const hours = narrow ? [0, 6, 12, 18, 24] : [0, 3, 6, 9, 12, 15, 18, 21, 24];
   const ticks = document.getElementById("ticks");
-  ticks.style.gridTemplateColumns = `repeat(${labels.length}, 1fr)`;
-  ticks.innerHTML = labels.map((h) => `<span>${h}</span>`).join("");
+  ticks.innerHTML = hours
+    .map((hour) => {
+      const at = ((hour / 24) * 100).toFixed(4);
+      return `<span style="left:${at}%">${String(hour).padStart(2, "0")}</span>`;
+    })
+    .join("");
 }
 
 const clock = (iso) => (iso ? iso.slice(11, 16) : null);
