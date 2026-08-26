@@ -6,6 +6,7 @@ import sys
 import time
 from collections.abc import Sequence
 from typing import Any
+from urllib.error import HTTPError
 from urllib.request import urlopen
 
 
@@ -14,7 +15,13 @@ class SmokeCheckError(RuntimeError):
 
 
 def fetch_text(url: str, timeout_seconds: float) -> str:
-    with urlopen(url, timeout=timeout_seconds) as response:
+    try:
+        response = urlopen(url, timeout=timeout_seconds)
+    except HTTPError as error:
+        error.close()
+        raise
+
+    with response:
         return response.read().decode("utf-8")
 
 

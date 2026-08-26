@@ -2,10 +2,16 @@ import json
 import threading
 from contextlib import contextmanager
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from urllib.error import HTTPError
 
 import pytest
 
-from scripts.deployment_smoke import SmokeCheckError, check_deployment, main
+from scripts.deployment_smoke import (
+    SmokeCheckError,
+    check_deployment,
+    fetch_text,
+    main,
+)
 
 
 class DeploymentHandler(BaseHTTPRequestHandler):
@@ -70,6 +76,16 @@ def deployment_server(*, health_failures=0, version="abc123", include_lofoten=Tr
         server.shutdown()
         server.server_close()
         thread.join()
+
+
+def test_failed_http_response_is_closed():
+    with (
+        deployment_server(health_failures=1) as (base_url, _),
+        pytest.raises(HTTPError) as error,
+    ):
+        fetch_text(f"{base_url}/health", timeout_seconds=1)
+
+    assert error.value.closed
 
 
 def test_live_contract_passes_for_expected_deployment():
