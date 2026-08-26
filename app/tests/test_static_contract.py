@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 
 ROOT = Path(__file__).parents[2]
@@ -29,3 +30,13 @@ def test_the_initial_date_comes_back_from_the_selected_place():
 
     assert "new Date().toISOString()" not in script
     assert "date.value = light.date" in script
+
+
+def test_a_sticky_control_bar_is_opaque():
+    css = read("styles.css")
+    block = re.search(r"#controls \{(.*?)\n\}", css, re.S)
+
+    assert block, "the controls rule is missing"
+    if "position: sticky" in block.group(1):
+        # Otherwise the page scrolls visibly through the bar.
+        assert "background:" in block.group(1)
