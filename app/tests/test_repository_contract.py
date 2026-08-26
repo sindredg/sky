@@ -39,3 +39,19 @@ def test_no_workflow_still_targets_the_deprecated_node_20_actions():
         text = workflow.read_text()
         for pin in stale:
             assert pin not in text, f"{workflow.name} still pins {pin}"
+
+
+def test_warnings_fail_the_build():
+    config = (ROOT / "pytest.ini").read_text()
+
+    # Without this the next deprecation is a log line rather than a red check.
+    assert "filterwarnings" in config
+    assert "error" in config
+
+
+def test_the_test_client_uses_the_supported_http_library():
+    requirements = (ROOT / "app" / "requirements-dev.txt").read_text()
+
+    # Starlette 1.6 deprecated httpx for its test client in favour of httpx2.
+    assert "httpx2==" in requirements
+    assert "\nhttpx==" not in requirements
