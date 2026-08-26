@@ -63,3 +63,20 @@ def test_eclipses_endpoint_finds_the_2026_pair():
 
 def test_eclipses_window_is_capped():
     assert client.get("/api/eclipses?days=99999").status_code == 422
+
+
+def test_version_reports_the_configured_build(monkeypatch):
+    monkeypatch.setenv("SERVICE_VERSION", "abc123")
+
+    import importlib
+
+    from app.src import main as main_module
+
+    reloaded = importlib.reload(main_module)
+    try:
+        with TestClient(reloaded.app) as client:
+            body = client.get("/version").json()
+        assert body["version"] == "abc123"
+    finally:
+        monkeypatch.delenv("SERVICE_VERSION", raising=False)
+        importlib.reload(main_module)
