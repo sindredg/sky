@@ -12,6 +12,7 @@ locals {
     plan_identity     = "id-aca-prod-plan"
     deploy_identity   = "id-aca-prod-deploy"
     pull_identity     = "id-aca-prod-pull"
+    push_identity     = "id-aca-prod-push"
     state_delete_lock = "lock-aca-prod-tfstate"
   }
 
