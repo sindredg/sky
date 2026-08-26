@@ -80,3 +80,24 @@ def test_version_reports_the_configured_build(monkeypatch):
     finally:
         monkeypatch.delenv("SERVICE_VERSION", raising=False)
         importlib.reload(main_module)
+
+
+def test_svalbard_reports_polar_night_and_midnight_sun():
+    with TestClient(app) as client:
+        december = client.get("/api/light?place=svalbard&on=2026-12-21").json()
+        june = client.get("/api/light?place=svalbard&on=2026-06-21").json()
+
+    assert december["polar_night"] is True
+    assert december["daylight_minutes"] == 0
+    assert december["highest"]["altitude"] < 0
+
+    assert june["midnight_sun"] is True
+    assert june["daylight_minutes"] == 24 * 60
+
+
+def test_southern_places_invert_the_seasons():
+    with TestClient(app) as client:
+        december = client.get("/api/light?place=uluru&on=2026-12-21").json()
+        june = client.get("/api/light?place=uluru&on=2026-06-21").json()
+
+    assert december["daylight_minutes"] > june["daylight_minutes"]
