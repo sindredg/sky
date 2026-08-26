@@ -22,3 +22,10 @@ def test_the_hour_scale_marks_both_ends_of_the_day():
     # Without a label at 24 the right edge of the bar has no reference.
     assert "[0, 6, 12, 18, 24]" in script
     assert "[0, 3, 6, 9, 12, 15, 18, 21, 24]" in script
+
+
+def test_the_initial_date_comes_back_from_the_selected_place():
+    script = read("app.js")
+
+    assert "new Date().toISOString()" not in script
+    assert "date.value = light.date" in script

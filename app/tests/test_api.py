@@ -1,6 +1,10 @@
+from datetime import date
+
 from fastapi.testclient import TestClient
 
-from app.src.main import app
+from app.src import main as main_module
+
+app = main_module.app
 
 client = TestClient(app)
 
@@ -20,6 +24,21 @@ def test_light_for_a_known_place():
     body = client.get("/api/light?place=lofoten&on=2026-06-21").json()
     assert body["midnight_sun"] is True
     assert body["sunset"] is None
+
+
+def test_missing_date_uses_today_in_the_selected_place(monkeypatch):
+    seen_zones = []
+
+    def local_today(zone):
+        seen_zones.append(str(zone))
+        return date(2026, 1, 2)
+
+    monkeypatch.setattr(main_module, "_today", local_today, raising=False)
+
+    body = client.get("/api/light?place=lofoten").json()
+
+    assert body["date"] == "2026-01-02"
+    assert seen_zones == ["Europe/Oslo"]
 
 
 def test_unknown_place_is_404():
@@ -69,8 +88,6 @@ def test_version_reports_the_configured_build(monkeypatch):
     monkeypatch.setenv("SERVICE_VERSION", "abc123")
 
     import importlib
-
-    from app.src import main as main_module
 
     reloaded = importlib.reload(main_module)
     try:

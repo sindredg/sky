@@ -1,7 +1,7 @@
 """Golden hour planner."""
 
 import os
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Query
@@ -9,7 +9,7 @@ from fastapi.responses import FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 
 from . import moon as lunar
-from . import sun
+from . import sky, sun
 from .places import BY_SLUG, PLACES
 
 SERVICE_VERSION = os.getenv("SERVICE_VERSION", "0.0.0-local")
@@ -32,9 +32,13 @@ def _window(pair):
     return {"start": _iso(start), "end": _iso(end)}
 
 
-def _parse_day(value: str | None) -> date:
+def _today(zone) -> date:
+    return datetime.now(sky.as_timezone(zone)).date()
+
+
+def _parse_day(value: str | None, zone=UTC) -> date:
     try:
-        return date.fromisoformat(value) if value else date.today()
+        return date.fromisoformat(value) if value else _today(zone)
     except ValueError:
         raise HTTPException(status_code=400, detail="date must be YYYY-MM-DD") from None
 
@@ -88,7 +92,7 @@ async def light(
     tz: float = Query(0.0, ge=-12, le=14),
 ) -> dict:
     latitude, longitude, zone, label = _resolve(place, lat, lon, tz)
-    day = _parse_day(on)
+    day = _parse_day(on, zone)
     events = sun.day_events(day, latitude, longitude, zone)
 
     return {
@@ -127,7 +131,7 @@ async def moon(
     tz: float = Query(0.0, ge=-12, le=14),
 ) -> dict:
     latitude, longitude, zone, label = _resolve(place, lat, lon, tz)
-    day = _parse_day(on)
+    day = _parse_day(on, zone)
     events = lunar.day_events(day, latitude, longitude, zone)
 
     return {

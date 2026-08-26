@@ -57,11 +57,27 @@ Stop the local stack with `docker compose down`.
 
 ## Calculation limits
 
-Solar and lunar positions use low-precision theory. Rise and set times are
-limited to one-minute resolution by the sampling interval.
+Solar coordinates follow the US Naval Observatory's
+[approximate solar model](https://aa.usno.navy.mil/faq/sun_approx). Lunar
+coordinates follow Paul Schlyter's
+[low-precision model](https://stjarnhimlen.se/comp/ppcomp.html).
+
+Five geocentric lunar positions in 2026 are checked against NASA JPL
+[Horizons](https://ssd.jpl.nasa.gov/horizons/) DE441 output. Those samples are
+within 3 arcminutes in ecliptic longitude and latitude. This bounded check is
+not a general accuracy guarantee. Rise and set times also use one-minute
+sampling and simplified horizon corrections.
 
 Eclipse results report occurrence and kind. Path, magnitude, and local
 visibility require full ephemerides and are outside the current scope.
+
+## Review limits
+
+Pull requests preserve a reviewable history and required checks enforce the
+automated contracts. This is an owner-maintained project, so those pull
+requests are not independent peer review unless another reviewer participates.
+Green CI demonstrates that the checked contracts pass. It is not external
+validation of the architecture or astronomy.
 
 ## Deployment
 
@@ -72,7 +88,7 @@ Three Terraform states, split by how often each changes and who may apply it:
 
 | State | Owns | Applied by |
 |---|---|---|
-| `bootstrap` | State backend, workload identities, every role assignment | A human, once |
+| `bootstrap` | State backend, workload identities, every role assignment | A human, twice during the first deployment |
 | `platform` | Resource group, registry, Log Analytics, Container Apps environment | The pipeline |
 | `application` | The container app, its ingress and scaling | The pipeline |
 

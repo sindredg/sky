@@ -10,6 +10,8 @@ Initialize and validate locally:
     terraform fmt -check
     terraform validate
 
-After the human-applied bootstrap exists, initialize the remote backend with
-`backend.hcl` and pass `../../environments/production/platform.tfvars` to the
-plan command. A real plan and any apply require the owner's exact approval.
+After the first human-applied bootstrap stage exists, initialize the remote
+backend with `backend.hcl` and pass
+`../../environments/production/platform.tfvars` to the plan command. A real
+plan and any apply require the owner's exact approval. Follow the complete
+fresh deployment order in `../../bootstrap/README.md`.

@@ -1,5 +1,17 @@
 # The registry lives in the platform state, so it is resolved rather than referenced.
+moved {
+  from = azurerm_role_assignment.pull_registry
+  to   = azurerm_role_assignment.pull_registry[0]
+}
+
+moved {
+  from = azurerm_role_assignment.push_registry
+  to   = azurerm_role_assignment.push_registry[0]
+}
+
 data "azurerm_container_registry" "platform" {
+  count = var.enable_registry_role_assignments ? 1 : 0
+
   name                = var.container_registry_name
   resource_group_name = var.platform_resource_group_name
 }
@@ -78,7 +90,9 @@ resource "azurerm_user_assigned_identity" "pull" {
 }
 
 resource "azurerm_role_assignment" "pull_registry" {
-  scope                            = data.azurerm_container_registry.platform.id
+  count = var.enable_registry_role_assignments ? 1 : 0
+
+  scope                            = data.azurerm_container_registry.platform[0].id
   role_definition_name             = "AcrPull"
   principal_id                     = azurerm_user_assigned_identity.pull.principal_id
   principal_type                   = "ServicePrincipal"
@@ -102,7 +116,9 @@ resource "azurerm_federated_identity_credential" "push_main_branch" {
 }
 
 resource "azurerm_role_assignment" "push_registry" {
-  scope                            = data.azurerm_container_registry.platform.id
+  count = var.enable_registry_role_assignments ? 1 : 0
+
+  scope                            = data.azurerm_container_registry.platform[0].id
   role_definition_name             = "AcrPush"
   principal_id                     = azurerm_user_assigned_identity.push.principal_id
   principal_type                   = "ServicePrincipal"
