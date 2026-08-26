@@ -9,6 +9,11 @@ UUID = re.compile(
 )
 
 
+def artifacts(pattern: str) -> list[Path]:
+    # .terraform holds Terraform's own working files, gitignored and never tracked.
+    return [path for path in PLATFORM.rglob(pattern) if ".terraform" not in path.parts]
+
+
 def read(name: str) -> str:
     return (PLATFORM / name).read_text()
 
@@ -61,7 +66,7 @@ def test_platform_outputs_expose_only_application_inputs():
 
 
 def test_platform_has_no_runtime_or_authority_resources():
-    files = [path for path in PLATFORM.rglob("*") if path.is_file()]
+    files = [path for path in artifacts("*") if path.is_file()]
     tracked_text = "\n".join(
         path.read_text() for path in files if path.suffix in {".tf", ".hcl", ".md"}
     )
@@ -76,8 +81,8 @@ def test_platform_has_no_runtime_or_authority_resources():
         assert forbidden not in tracked_text
 
     assert not UUID.search(tracked_text)
-    assert not list(PLATFORM.rglob("*.tfstate"))
-    assert not list(PLATFORM.rglob("*.tfplan"))
+    assert not artifacts("*.tfstate")
+    assert not artifacts("*.tfplan")
 
 
 def test_environment_links_its_workspace_instead_of_only_streaming_logs():

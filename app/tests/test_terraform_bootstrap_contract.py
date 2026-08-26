@@ -9,6 +9,11 @@ UUID = re.compile(
 )
 
 
+def artifacts(pattern: str) -> list[Path]:
+    # .terraform holds Terraform's own working files, gitignored and never tracked.
+    return [path for path in BOOTSTRAP.rglob(pattern) if ".terraform" not in path.parts]
+
+
 def read(name: str) -> str:
     return (BOOTSTRAP / name).read_text()
 
@@ -82,11 +87,11 @@ def test_plan_and_deploy_identities_have_different_fixed_permissions():
 
 
 def test_tracked_bootstrap_has_no_subscription_uuid_or_runtime_artifact():
-    files = [path for path in BOOTSTRAP.rglob("*") if path.is_file()]
+    files = [path for path in artifacts("*") if path.is_file()]
     tracked_text = "\n".join(
         path.read_text() for path in files if path.suffix in {".tf", ".hcl", ".md"}
     )
 
     assert not UUID.search(tracked_text)
-    assert not list(BOOTSTRAP.rglob("*.tfstate"))
-    assert not list(BOOTSTRAP.rglob("*.tfplan"))
+    assert not artifacts("*.tfstate")
+    assert not artifacts("*.tfplan")
