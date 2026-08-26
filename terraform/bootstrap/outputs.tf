@@ -23,3 +23,13 @@ output "principal_ids" {
     deploy = azurerm_user_assigned_identity.deploy.principal_id
   }
 }
+
+output "image_pull_identity" {
+  description = "Identity the container app uses to pull images by digest."
+  value = {
+    id           = azurerm_user_assigned_identity.pull.id
+    name         = azurerm_user_assigned_identity.pull.name
+    client_id    = azurerm_user_assigned_identity.pull.client_id
+    principal_id = azurerm_user_assigned_identity.pull.principal_id
+  }
+}

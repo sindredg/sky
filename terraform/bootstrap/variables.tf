@@ -64,3 +64,20 @@ variable "deploy_environment" {
     error_message = "The deploy environment must use lowercase letters, numbers, or hyphens."
   }
 }
+
+variable "platform_resource_group_name" {
+  description = "Resource group holding the production container registry."
+  type        = string
+  default     = "rg-aca-prod-production"
+}
+
+variable "container_registry_name" {
+  description = "Production registry the image pull identity may read."
+  type        = string
+  default     = "acracaprod1345665076"
+
+  validation {
+    condition     = can(regex("^[a-z0-9]{5,50}$", var.container_registry_name))
+    error_message = "The registry name must contain 5 to 50 lowercase letters or numbers."
+  }
+}
