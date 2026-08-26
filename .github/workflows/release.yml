@@ -59,7 +59,7 @@ jobs:
           if docker manifest inspect "$reference" > /dev/null 2>&1; then
             echo "reusing the existing image for $GITHUB_SHA"
           else
-            docker build --tag "$reference" .
+            docker build --build-arg SERVICE_VERSION=$GITHUB_SHA --tag "$reference" .
             docker push "$reference"
           fi
 

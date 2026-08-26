@@ -1,8 +1,11 @@
 FROM python:3.12.14-slim-bookworm@sha256:b64e9d3a71eddaa1b3f80c04abf292b3139e3b7c4dd272d19c31dc1f91194d1b
 
+# The release passes the commit SHA so a replica can report its own build.
+ARG SERVICE_VERSION=0.0.0-local
+
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    SERVICE_VERSION=0.0.0-local
+    SERVICE_VERSION=${SERVICE_VERSION}
 
 WORKDIR /app
 

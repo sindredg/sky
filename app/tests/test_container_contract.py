@@ -61,3 +61,17 @@ def test_smoke_script_cleans_up_and_checks_runtime_contract():
     assert "/version" in script
     assert "id -u" in script
     assert "/usr/share/zoneinfo/Europe/Oslo" in script
+
+
+def test_the_version_is_a_build_argument_rather_than_a_fixed_value():
+    dockerfile = (ROOT / "Dockerfile").read_text()
+
+    # A hardcoded version means a running replica cannot say which build it is.
+    assert "ARG SERVICE_VERSION=0.0.0-local" in dockerfile
+    assert "SERVICE_VERSION=${SERVICE_VERSION}" in dockerfile
+
+
+def test_the_release_stamps_the_commit_into_the_image():
+    workflow = (ROOT / ".github" / "workflows" / "release.yml").read_text()
+
+    assert "--build-arg SERVICE_VERSION=$GITHUB_SHA" in workflow
