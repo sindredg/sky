@@ -55,6 +55,27 @@ def test_the_digest_travels_as_a_job_output_into_terraform():
     assert "-var=image_digest=" in defined["deploy"]
 
 
+def test_the_deployed_revision_is_checked_after_terraform_apply():
+    deploy = jobs()["deploy"]
+
+    apply = deploy.index("- name: apply")
+    output = deploy.index("- name: read application URL")
+    smoke = deploy.index("- name: verify the public deployment")
+
+    assert apply < output < smoke
+    assert "id: application" in deploy
+    assert "url=$(terraform" in deploy
+    assert 'echo "url=$url"' in deploy
+    assert '>> "$GITHUB_OUTPUT"' in deploy
+    assert "steps.application.outputs.url" in deploy
+    assert "python3 scripts/deployment_smoke.py" in deploy
+    assert '"$APPLICATION_URL" "$GITHUB_SHA"' in deploy
+
+
+def test_deployment_checker_changes_trigger_a_release():
+    assert "- 'scripts/deployment_smoke.py'" in read()
+
+
 def test_the_workflow_cannot_write_to_a_pull_request():
     text = read()
 
