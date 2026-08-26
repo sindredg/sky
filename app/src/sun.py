@@ -6,6 +6,7 @@ coordinates: https://aa.usno.navy.mil/faq/sun_approx
 
 import math
 from datetime import date, datetime, timedelta, tzinfo
+from itertools import pairwise
 
 from . import sky
 
@@ -46,10 +47,26 @@ def altitude(when: datetime, latitude: float, longitude: float) -> float:
     )
 
 
-def _minutes_between(start: datetime | None, end: datetime | None) -> int:
-    if start is None or end is None:
-        return 0
-    return round((end - start).total_seconds() / 60)
+def _minutes_above(samples: list[sky.Sample], threshold: float) -> float:
+    """Time spent above a threshold, summed interval by interval.
+
+    Subtracting sunrise from sunset assumes both crossings exist and fall in
+    that order. Neither holds when daylight spans local midnight.
+    """
+    total = 0.0
+
+    for first, second in pairwise(samples):
+        minutes = (second.at - first.at).total_seconds() / 60.0
+        above_first = first.altitude > threshold
+        above_second = second.altitude > threshold
+
+        if above_first and above_second:
+            total += minutes
+        elif above_first != above_second:
+            crossing = (threshold - first.altitude) / (second.altitude - first.altitude)
+            total += minutes * (crossing if above_first else 1.0 - crossing)
+
+    return total
 
 
 def _events_from_samples(
@@ -71,12 +88,7 @@ def _events_from_samples(
     midnight_sun = lowest.altitude > HORIZON
     polar_night = highest.altitude < HORIZON
 
-    if midnight_sun:
-        daylight_minutes = 24 * 60
-    elif polar_night:
-        daylight_minutes = 0
-    else:
-        daylight_minutes = _minutes_between(sunrise, sunset)
+    daylight_minutes = round(_minutes_above(samples, HORIZON))
 
     events = {
         "sunrise": here(sunrise),

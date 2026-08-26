@@ -4,7 +4,7 @@ from datetime import date, timedelta
 
 import pytest
 
-from app.src import sun
+from app.src import sky, sun
 
 EQUINOX = date(2026, 3, 20)
 JUNE = date(2026, 6, 21)
@@ -15,6 +15,7 @@ TROMSO = (69.6492, 18.9553)
 OSLO = (59.9139, 10.7522)
 QUITO = (-0.1807, -78.4678)
 SYDNEY = (-33.8688, 151.2093)
+SVALBARD = (78.2232, 15.6267)
 
 
 def test_equator_has_about_twelve_hours_at_equinox():
@@ -152,3 +153,47 @@ def test_one_day_season_matches_day_events_within_a_minute():
         row["golden_hour_evening"][1] - events["golden_hour_evening"][1]
     ) <= timedelta(minutes=1)
     assert abs(row["daylight_minutes"] - events["daylight_minutes"]) <= 1
+
+
+def _sampled_daylight_minutes(day, latitude, longitude, tz):
+    """Count minutes above the horizon directly, without any crossing logic."""
+    zone = sky.as_timezone(tz)
+    samples = sky.sample_day(
+        day, lambda when: sun.altitude(when, latitude, longitude), zone
+    )
+    return sum(1 for sample in samples[:-1] if sample.altitude > sun.HORIZON)
+
+
+@pytest.mark.parametrize(
+    "day, latitude, longitude, tz",
+    [
+        (date(2026, 5, 22), *LOFOTEN, "Europe/Oslo"),
+        (date(2026, 5, 23), *LOFOTEN, "Europe/Oslo"),
+        (date(2026, 1, 1), 0.0, 179.9, 0.0),
+    ],
+)
+def test_daylight_counts_every_minute_the_sun_is_up(day, latitude, longitude, tz):
+    """Daylight can begin before local midnight or run past it, and still counts."""
+    events = sun.day_events(day, latitude, longitude, tz=tz)
+    counted = _sampled_daylight_minutes(day, latitude, longitude, tz)
+
+    assert abs(events["daylight_minutes"] - counted) <= 2
+
+
+def test_daylight_is_never_negative_across_a_northern_year():
+    for latitude, longitude, zone in (
+        (*LOFOTEN, "Europe/Oslo"),
+        (*TROMSO, "Europe/Oslo"),
+        (*SVALBARD, "Arctic/Longyearbyen"),
+    ):
+        found = sun.season(date(2026, 1, 1), 365, latitude, longitude, tz=zone)
+        assert min(row["daylight_minutes"] for row in found["series"]) >= 0
+
+
+def test_northern_shortest_day_falls_inside_the_polar_night():
+    found = sun.season(date(2026, 1, 1), 365, *LOFOTEN, tz="Europe/Oslo")
+    shortest = found["summary"]["shortest_day"]
+    darkest = next(row for row in found["series"] if row["date"] == shortest["date"])
+
+    assert shortest["daylight_minutes"] == 0
+    assert darkest["polar_night"] is True
