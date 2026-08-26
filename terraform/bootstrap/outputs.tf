@@ -33,3 +33,13 @@ output "image_pull_identity" {
     principal_id = azurerm_user_assigned_identity.pull.principal_id
   }
 }
+
+output "image_push_identity" {
+  description = "Identity the release build uses to push images. Its client ID becomes a repository variable."
+  value = {
+    id           = azurerm_user_assigned_identity.push.id
+    name         = azurerm_user_assigned_identity.push.name
+    client_id    = azurerm_user_assigned_identity.push.client_id
+    principal_id = azurerm_user_assigned_identity.push.principal_id
+  }
+}

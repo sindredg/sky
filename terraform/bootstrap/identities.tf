@@ -85,3 +85,27 @@ resource "azurerm_role_assignment" "pull_registry" {
   skip_service_principal_aad_check = true
   description                      = "Allows the container app to pull images from the production registry."
 }
+
+resource "azurerm_user_assigned_identity" "push" {
+  name                = local.names.push_identity
+  resource_group_name = azurerm_resource_group.state.name
+  location            = azurerm_resource_group.state.location
+  tags                = local.common_tags
+}
+
+resource "azurerm_federated_identity_credential" "push_main_branch" {
+  name                      = "github-main-branch"
+  user_assigned_identity_id = azurerm_user_assigned_identity.push.id
+  audience                  = ["api://AzureADTokenExchange"]
+  issuer                    = "https://token.actions.githubusercontent.com"
+  subject                   = "${local.config.github_subject_prefix}:ref:refs/heads/main"
+}
+
+resource "azurerm_role_assignment" "push_registry" {
+  scope                            = data.azurerm_container_registry.platform.id
+  role_definition_name             = "AcrPush"
+  principal_id                     = azurerm_user_assigned_identity.push.principal_id
+  principal_type                   = "ServicePrincipal"
+  skip_service_principal_aad_check = true
+  description                      = "Allows the release build to push images to the production registry."
+}

@@ -97,11 +97,43 @@ def test_the_pull_identity_is_scoped_to_the_registry_only():
     )
 
 
+def grant(name: str) -> str:
+    found = re.search(
+        r'resource "azurerm_role_assignment" "' + name + r'" \{(.*?)\n\}',
+        read("identities.tf"),
+        re.S,
+    )
+    assert found, name
+    return found.group(1)
+
+
 def test_the_pull_identity_cannot_push_or_delete_images():
+    block = grant("pull_registry")
+
+    assert '"AcrPull"' in block
+    for forbidden in ("AcrPush", "AcrDelete", "AcrImageSigner"):
+        assert forbidden not in block
+
+
+def test_the_push_identity_reaches_the_registry_and_nothing_else():
+    identities = read("identities.tf")
+    block = grant("push_registry")
+
+    assert 'resource "azurerm_user_assigned_identity" "push"' in identities
+    assert '"AcrPush"' in block
+    assert "data.azurerm_container_registry.platform.id" in block
+    assert "data.azurerm_subscription.current.id" not in block
+
+
+def test_the_push_identity_is_trusted_on_the_branch_not_the_environment():
     identities = read("identities.tf")
 
-    for forbidden in ("AcrPush", "AcrDelete", "AcrImageSigner"):
-        assert f'"{forbidden}"' not in identities
+    # An environment subject would put the build behind the deployment gate.
+    assert (
+        'subject                   = "${local.config.github_subject_prefix}:ref:refs/heads/main"'
+        in identities
+    )
+    assert "azurerm_user_assigned_identity.push.id" in identities
 
 
 def test_the_registry_is_resolved_by_name_not_by_a_hardcoded_id():
