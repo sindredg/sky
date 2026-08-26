@@ -2,6 +2,8 @@
 
 from datetime import UTC, date, datetime, timedelta
 
+import pytest
+
 from app.src import moon
 
 OSLO = (59.9139, 10.7522)
@@ -13,6 +15,30 @@ KNOWN_2026 = {
     (date(2026, 8, 12), "solar"),
     (date(2026, 8, 28), "lunar"),
 }
+
+# NASA JPL Horizons DE441, geocentric apparent ecliptic-of-date coordinates.
+# Query: https://ssd.jpl.nasa.gov/horizons/
+JPL_HORIZONS_2026 = (
+    (datetime(2026, 1, 1, tzinfo=UTC), 66.7156363, 5.0490966),
+    (datetime(2026, 3, 20, 12, tzinfo=UTC), 18.8639882, 3.3691379),
+    (datetime(2026, 6, 21, tzinfo=UTC), 168.6969009, -1.4722116),
+    (datetime(2026, 9, 22, 12, tzinfo=UTC), 309.5153172, -1.7968138),
+    (datetime(2026, 12, 21, tzinfo=UTC), 46.2659775, 5.0835702),
+)
+
+
+def angular_difference(first: float, second: float) -> float:
+    return abs((first - second + 180.0) % 360.0 - 180.0)
+
+
+@pytest.mark.parametrize(("when", "longitude", "latitude"), JPL_HORIZONS_2026)
+def test_lunar_position_is_within_three_arcminutes_of_jpl_horizons(
+    when, longitude, latitude
+):
+    found = moon.position(when)
+
+    assert angular_difference(found.longitude, longitude) <= 0.05
+    assert abs(found.latitude - latitude) <= 0.05
 
 
 def test_illumination_is_zero_at_new_moon():

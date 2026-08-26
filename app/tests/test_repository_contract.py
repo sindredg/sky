@@ -71,3 +71,18 @@ def test_the_readme_links_the_running_service():
 
     assert "azurecontainerapps.io" in readme
     assert "Nothing is deployed yet" not in readme
+
+
+def test_public_accuracy_claims_name_their_sources_and_validation_scope():
+    readme = (ROOT / "README.md").read_text()
+
+    assert "https://aa.usno.navy.mil/faq/sun_approx" in readme
+    assert "https://stjarnhimlen.se/comp/ppcomp.html" in readme
+    assert "https://ssd.jpl.nasa.gov/horizons/" in readme
+    assert "not a general accuracy guarantee" in readme
+
+
+def test_the_readme_does_not_present_ci_as_independent_review():
+    readme = (ROOT / "README.md").read_text()
+
+    assert "not independent peer review" in readme

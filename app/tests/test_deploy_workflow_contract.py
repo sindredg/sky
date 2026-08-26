@@ -32,6 +32,14 @@ def test_both_jobs_request_an_oidc_token():
         assert "id-token: write" in text, name
 
 
+def test_the_first_platform_deployment_can_be_started_manually():
+    text = read()
+    apply = jobs()["apply"]
+
+    assert "workflow_dispatch:" in text
+    assert "github.event_name == 'workflow_dispatch'" in apply
+
+
 def test_only_the_apply_job_targets_the_production_environment():
     defined = jobs()
 

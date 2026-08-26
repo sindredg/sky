@@ -92,7 +92,7 @@ def test_the_pull_identity_is_scoped_to_the_registry_only():
     assert 'resource "azurerm_user_assigned_identity" "pull"' in identities
     assert 'role_definition_name             = "AcrPull"' in identities
     assert (
-        "scope                            = data.azurerm_container_registry.platform.id"
+        "scope                            = data.azurerm_container_registry.platform[0].id"
         in identities
     )
 
@@ -121,7 +121,7 @@ def test_the_push_identity_reaches_the_registry_and_nothing_else():
 
     assert 'resource "azurerm_user_assigned_identity" "push"' in identities
     assert '"AcrPush"' in block
-    assert "data.azurerm_container_registry.platform.id" in block
+    assert "data.azurerm_container_registry.platform[0].id" in block
     assert "data.azurerm_subscription.current.id" not in block
 
 
@@ -146,6 +146,38 @@ def test_the_registry_is_resolved_by_name_not_by_a_hardcoded_id():
     assert "var.platform_resource_group_name" in identities
     assert 'variable "container_registry_name"' in variables
     assert 'variable "platform_resource_group_name"' in variables
+
+
+def test_registry_bindings_can_wait_for_the_platform_without_state_churn():
+    identities = read("identities.tf")
+    variables = read("variables.tf")
+
+    assert 'variable "enable_registry_role_assignments"' in variables
+    assert "default     = true" in variables
+    assert identities.count("var.enable_registry_role_assignments ? 1 : 0") == 3
+    for name in ("pull_registry", "push_registry"):
+        assert f"from = azurerm_role_assignment.{name}" in identities
+        assert f"to   = azurerm_role_assignment.{name}[0]" in identities
+
+
+def test_fresh_deployment_documents_both_bootstrap_stages_in_order():
+    readme = read("README.md")
+
+    foundation = readme.index("-var=enable_registry_role_assignments=false")
+    platform = readme.index("gh workflow run deploy.yml")
+    bindings = readme.index("-var=enable_registry_role_assignments=true")
+
+    assert foundation < platform < bindings
+
+
+def test_fresh_deployment_starts_with_a_local_backend_override():
+    override = read("bootstrap_override.tf.example")
+    readme = read("README.md")
+
+    assert 'backend "local" {}' in override
+    assert "cp bootstrap_override.tf.example bootstrap_override.tf" in readme
+    assert "rm bootstrap_override.tf" in readme
+    assert "terraform init -migrate-state -backend-config=backend.hcl" in readme
 
 
 def test_tracked_bootstrap_has_no_subscription_uuid_or_runtime_artifact():

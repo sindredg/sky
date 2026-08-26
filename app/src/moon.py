@@ -1,8 +1,10 @@
 """Lunar position, phase, and when an eclipse is possible.
 
-Positions follow the standard low precision lunar theory with its main
-perturbation terms, which is accurate to a few arcminutes. That is well inside
-the error a one minute sampling step already introduces into rise and set times.
+Positions implement Paul Schlyter's low-precision lunar model and its main
+perturbation terms: https://stjarnhimlen.se/comp/ppcomp.html
+
+Five 2026 reference positions are checked against NASA JPL Horizons in the
+test suite. That bounded comparison is not a general accuracy guarantee.
 """
 
 import math

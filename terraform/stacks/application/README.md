@@ -7,6 +7,9 @@ Applied by the pipeline through the deployment identity. It reads the platform
 stack's outputs for the environment and registry, and resolves the image pull
 identity by name from the bootstrap root.
 
+On a fresh deployment, run this only after the second bootstrap stage has
+granted `AcrPull` and `AcrPush` on the platform registry.
+
 ## The image is always a digest
 
 `image_digest` has no default and is validated against

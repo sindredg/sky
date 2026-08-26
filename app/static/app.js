@@ -129,13 +129,16 @@ function moonPath(fraction, waxing, radius) {
 
 async function load() {
   const place = document.getElementById("place").value;
-  const on = document.getElementById("date").value;
+  const date = document.getElementById("date");
+  const on = date.value;
   const query = `place=${encodeURIComponent(place)}&on=${on}`;
 
   const [light, moon] = await Promise.all([
     getJSON(`/api/light?${query}`),
     getJSON(`/api/moon?${query}`),
   ]);
+
+  if (!on) date.value = light.date;
 
   paintBar(light.curve);
   document.getElementById("verdict").innerHTML = describe(light);
@@ -202,7 +205,6 @@ async function start() {
 
   const notes = Object.fromEntries(places.places.map((p) => [p.slug, p.note]));
   const date = document.getElementById("date");
-  date.value = new Date().toISOString().slice(0, 10);
 
   const refresh = async () => {
     document.getElementById("note").textContent = notes[select.value];

@@ -71,6 +71,12 @@ variable "platform_resource_group_name" {
   default     = "rg-aca-prod-production"
 }
 
+variable "enable_registry_role_assignments" {
+  description = "Create registry grants after the platform registry exists."
+  type        = bool
+  default     = true
+}
+
 variable "container_registry_name" {
   description = "Production registry the image pull identity may read."
   type        = string

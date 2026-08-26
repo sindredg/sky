@@ -23,3 +23,9 @@ access remains enabled because GitHub-hosted runners need the Blob endpoint.
 The deployment identity cannot create role assignments. New application
 identities and registry grants are added through a later human-reviewed
 bootstrap change.
+
+A fresh deployment applies this root in two stages. The first creates the state
+backend and identities without registry grants. The deployment identity then
+creates the platform registry. The second human-reviewed bootstrap apply adds
+the `AcrPull` and `AcrPush` grants. Existing deployments default to keeping the
+grants enabled, and moved blocks preserve their Terraform addresses.

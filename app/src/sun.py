@@ -1,4 +1,8 @@
-"""Solar position and the daylight events that follow from it."""
+"""Solar position and the daylight events that follow from it.
+
+The coordinate model follows the US Naval Observatory's approximate solar
+coordinates: https://aa.usno.navy.mil/faq/sun_approx
+"""
 
 import math
 from datetime import date, datetime, tzinfo

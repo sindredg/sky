@@ -59,8 +59,13 @@ def sample_day(
 ) -> list[Sample]:
     """One altitude per step across the local day."""
     zone = as_timezone(tz)
-    start = datetime(day.year, day.month, day.day, tzinfo=zone).astimezone(UTC)
-    steps = (24 * 60) // step_minutes
+    local_start = datetime(day.year, day.month, day.day, tzinfo=zone)
+    tomorrow = day + timedelta(days=1)
+    local_end = datetime(tomorrow.year, tomorrow.month, tomorrow.day, tzinfo=zone)
+    start = local_start.astimezone(UTC)
+    end = local_end.astimezone(UTC)
+    elapsed_minutes = int((end - start).total_seconds() // 60)
+    steps = elapsed_minutes // step_minutes
 
     return [
         Sample(
