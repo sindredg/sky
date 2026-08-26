@@ -99,6 +99,32 @@ def test_live_contract_passes_for_expected_deployment():
         )
 
 
+def test_monitor_mode_accepts_and_reports_the_live_version():
+    with deployment_server(version="live789") as (base_url, _):
+        actual_version = check_deployment(
+            base_url,
+            attempts=1,
+            delay_seconds=0,
+            timeout_seconds=1,
+        )
+
+    assert actual_version == "live789"
+
+
+@pytest.mark.parametrize("version", [None, ""])
+def test_monitor_mode_rejects_a_missing_version(version):
+    with (
+        deployment_server(version=version) as (base_url, _),
+        pytest.raises(SmokeCheckError, match="valid version"),
+    ):
+        check_deployment(
+            base_url,
+            attempts=1,
+            delay_seconds=0,
+            timeout_seconds=1,
+        )
+
+
 def test_cold_start_is_retried_before_the_contract_is_checked():
     with deployment_server(health_failures=1) as (base_url, handler):
         check_deployment(
@@ -160,3 +186,21 @@ def test_command_reports_the_verified_revision(capsys):
 
     assert status == 0
     assert capsys.readouterr().out == "deployment smoke passed for abc123\n"
+
+
+def test_monitor_command_reports_the_live_revision(capsys):
+    with deployment_server(version="live789") as (base_url, _):
+        status = main(
+            [
+                base_url,
+                "--attempts",
+                "1",
+                "--delay-seconds",
+                "0",
+                "--timeout-seconds",
+                "1",
+            ]
+        )
+
+    assert status == 0
+    assert capsys.readouterr().out == "deployment smoke passed for live789\n"
