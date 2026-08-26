@@ -27,3 +27,15 @@ def test_sample_day_spans_the_actual_local_day_on_dst_transitions(day, elapsed_h
     assert samples[-1].at.astimezone(zone) == datetime(
         tomorrow.year, tomorrow.month, tomorrow.day, tzinfo=zone
     )
+
+
+def test_sampling_between_two_instants_covers_the_span():
+    from datetime import UTC, datetime, timedelta
+
+    start = datetime(2026, 6, 21, 12, tzinfo=UTC)
+    end = start + timedelta(hours=24)
+    samples = sky.sample_between(start, end, lambda w: 0.0, step_minutes=60)
+
+    assert samples[0].at == start
+    assert samples[-1].at == end
+    assert len(samples) == 25

@@ -266,3 +266,8 @@ footer { margin-top: 4rem; padding-top: 1.5rem; border-top: 1px solid var(--rule
   opacity: 0.45;
   transition: opacity 120ms ease-in;
 }
+
+
+.milkyway { margin-top: 3rem; }
+
+.milkyway .verdict { font-size: 1.15rem; margin-bottom: 1rem; }
