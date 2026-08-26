@@ -177,6 +177,14 @@ async def milkyway(
         else {"start": _iso(window["start"]), "end": _iso(window["end"])},
         "reason": found["reason"],
         "moon": found["moon"],
+        "direction": None
+        if found["direction"] is None
+        else {
+            "azimuth": found["direction"]["azimuth"],
+            "compass": found["direction"]["compass"],
+            "highest_at": _iso(found["direction"]["highest_at"]),
+        },
+        "visible_south_of": found["visible_south_of"],
         "note": (
             "The galactic centre is a fixed point, so what changes is where you "
             "stand and when you look."

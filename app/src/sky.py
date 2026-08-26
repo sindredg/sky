@@ -25,14 +25,17 @@ def as_timezone(tz: str | float | tzinfo) -> tzinfo:
     return tz
 
 
-def equatorial_to_altitude(
+def equatorial_to_horizontal(
     when: datetime,
     right_ascension: float,
     declination: float,
     latitude: float,
     longitude: float,
-) -> float:
-    """Altitude in degrees, from equatorial coordinates in radians."""
+) -> tuple[float, float]:
+    """Altitude and azimuth in degrees, from equatorial coordinates in radians.
+
+    Azimuth is measured from north, increasing eastward, so 180 is due south.
+    """
     n = days_since_j2000(when)
     greenwich = (18.697374558 + 24.06570982441908 * n) % 24.0
     local = math.radians((greenwich * 15.0 + longitude) % 360.0)
@@ -42,7 +45,31 @@ def equatorial_to_altitude(
     sin_alt = math.sin(lat) * math.sin(declination) + math.cos(lat) * math.cos(
         declination
     ) * math.cos(hour_angle)
-    return math.degrees(math.asin(max(-1.0, min(1.0, sin_alt))))
+    altitude = math.degrees(math.asin(max(-1.0, min(1.0, sin_alt))))
+
+    azimuth = math.degrees(
+        math.atan2(
+            -math.cos(declination) * math.sin(hour_angle),
+            math.sin(declination) * math.cos(lat)
+            - math.cos(declination) * math.sin(lat) * math.cos(hour_angle),
+        )
+    )
+
+    return altitude, azimuth % 360.0
+
+
+def equatorial_to_altitude(
+    when: datetime,
+    right_ascension: float,
+    declination: float,
+    latitude: float,
+    longitude: float,
+) -> float:
+    """Altitude in degrees, from equatorial coordinates in radians."""
+    altitude, _ = equatorial_to_horizontal(
+        when, right_ascension, declination, latitude, longitude
+    )
+    return altitude
 
 
 @dataclass(frozen=True)
