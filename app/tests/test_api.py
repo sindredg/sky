@@ -118,3 +118,51 @@ def test_southern_places_invert_the_seasons():
         june = client.get("/api/light?place=uluru&on=2026-06-21").json()
 
     assert december["daylight_minutes"] > june["daylight_minutes"]
+
+
+A_YEAR = "/api/season?place=lofoten&from=2026-01-01&days=365"
+
+
+def test_season_returns_one_row_per_day():
+    body = client.get(A_YEAR).json()
+
+    assert body["days"] == 365
+    assert len(body["series"]) == 365
+    assert body["step_minutes"] == 5
+    assert body["series"][0]["date"] == "2026-01-01"
+
+
+def test_polar_night_rows_report_no_sunrise_rather_than_failing():
+    dark = [row for row in client.get(A_YEAR).json()["series"] if row["polar_night"]]
+
+    assert dark
+    assert all(row["sunrise"] is None for row in dark)
+    assert all(row["sunset"] is None for row in dark)
+    assert all(row["daylight_minutes"] == 0 for row in dark)
+
+
+def test_season_rejects_a_period_it_cannot_bound():
+    for days in (0, 367):
+        response = client.get(f"/api/season?place=lofoten&days={days}")
+        assert response.status_code == 400
+        assert response.json()["detail"] == "days must be between 1 and 366"
+
+
+def test_season_accepts_both_boundary_lengths():
+    for days in (1, 366):
+        response = client.get(f"/api/season?place=lofoten&from=2026-01-01&days={days}")
+        assert response.status_code == 200
+        assert len(response.json()["series"]) == days
+
+
+def test_season_summarises_what_a_single_day_cannot():
+    summary = client.get(A_YEAR).json()["summary"]
+    span = summary["midnight_sun_ranges"][0]
+
+    assert date.fromisoformat(span["start"]).month == 5
+    assert date.fromisoformat(span["end"]).month == 7
+    assert (
+        summary["longest_day"]["daylight_minutes"]
+        > summary["shortest_day"]["daylight_minutes"]
+    )
+    assert summary["astronomical_darkness_minutes"] > 0

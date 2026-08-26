@@ -122,6 +122,81 @@ async def light(
     }
 
 
+SEASON_NOTE = (
+    "Ranges are sampled every five minutes, so a crossing can sit a few seconds "
+    "from the one minute answer the single day endpoints give."
+)
+
+
+def _season_row(row: dict) -> dict:
+    return {
+        "date": row["date"].isoformat(),
+        "sunrise": _iso(row["sunrise"]),
+        "sunset": _iso(row["sunset"]),
+        "daylight_minutes": row["daylight_minutes"],
+        "golden_hour_evening": _window(row["golden_hour_evening"]),
+        "midnight_sun": row["midnight_sun"],
+        "polar_night": row["polar_night"],
+    }
+
+
+def _span(span: dict) -> dict:
+    return {
+        "start": span["start"].isoformat(),
+        "end": span["end"].isoformat(),
+        "days": span["days"],
+    }
+
+
+def _day_summary(entry: dict) -> dict:
+    return {
+        "date": entry["date"].isoformat(),
+        "daylight_minutes": entry["daylight_minutes"],
+    }
+
+
+@app.get("/api/season")
+async def season(
+    place: str | None = None,
+    lat: float | None = Query(None, ge=-90, le=90),
+    lon: float | None = Query(None, ge=-180, le=180),
+    start: str | None = Query(None, alias="from"),
+    days: int = 30,
+    tz: float = Query(0.0, ge=-12, le=14),
+) -> dict:
+    latitude, longitude, zone, label = _resolve(place, lat, lon, tz)
+
+    if not 1 <= days <= 366:
+        raise HTTPException(status_code=400, detail="days must be between 1 and 366")
+
+    first = _parse_day(start, zone)
+    found = sun.season(first, days, latitude, longitude, zone)
+    summary = found["summary"]
+
+    return {
+        "location": label,
+        "from": first.isoformat(),
+        "days": days,
+        "latitude": latitude,
+        "longitude": longitude,
+        "timezone": str(zone),
+        "step_minutes": found["step_minutes"],
+        "note": SEASON_NOTE,
+        "series": [_season_row(row) for row in found["series"]],
+        "summary": {
+            "longest_day": _day_summary(summary["longest_day"]),
+            "shortest_day": _day_summary(summary["shortest_day"]),
+            "midnight_sun_ranges": [
+                _span(span) for span in summary["midnight_sun_ranges"]
+            ],
+            "polar_night_ranges": [
+                _span(span) for span in summary["polar_night_ranges"]
+            ],
+            "astronomical_darkness_minutes": summary["astronomical_darkness_minutes"],
+        },
+    }
+
+
 @app.get("/api/moon")
 async def moon(
     place: str | None = None,
