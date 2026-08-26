@@ -30,15 +30,17 @@ def fetch_json(url: str, timeout_seconds: float) -> Any:
 
 
 def verify_contract(
-    base_url: str, expected_version: str, timeout_seconds: float
-) -> None:
+    base_url: str, expected_version: str | None, timeout_seconds: float
+) -> str:
     health = fetch_text(f"{base_url}/health", timeout_seconds).strip()
     if health != "healthy":
         raise SmokeCheckError(f"health returned {health!r}")
 
     version = fetch_json(f"{base_url}/version", timeout_seconds)
     actual_version = version.get("version") if isinstance(version, dict) else None
-    if actual_version != expected_version:
+    if not isinstance(actual_version, str) or not actual_version.strip():
+        raise SmokeCheckError("/version did not return a valid version")
+    if expected_version is not None and actual_version != expected_version:
         raise SmokeCheckError(
             f"expected {expected_version}, received {actual_version} from /version"
         )
@@ -54,23 +56,24 @@ def verify_contract(
     ):
         raise SmokeCheckError("/api/places does not include lofoten")
 
+    return actual_version
+
 
 def check_deployment(
     base_url: str,
-    expected_version: str,
+    expected_version: str | None = None,
     *,
     attempts: int = 10,
     delay_seconds: float = 3,
     timeout_seconds: float = 10,
-) -> None:
+) -> str:
     if attempts < 1:
         raise ValueError("attempts must be at least 1")
 
     base_url = base_url.rstrip("/")
     for attempt in range(1, attempts + 1):
         try:
-            verify_contract(base_url, expected_version, timeout_seconds)
-            return
+            return verify_contract(base_url, expected_version, timeout_seconds)
         except (OSError, SmokeCheckError, ValueError) as error:
             if attempt == attempts:
                 raise SmokeCheckError(
@@ -84,7 +87,7 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         description="verify a deployed Golden Hour revision"
     )
     parser.add_argument("base_url")
-    parser.add_argument("expected_version")
+    parser.add_argument("expected_version", nargs="?")
     parser.add_argument("--attempts", type=int, default=10)
     parser.add_argument("--delay-seconds", type=float, default=3)
     parser.add_argument("--timeout-seconds", type=float, default=10)
@@ -93,14 +96,14 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = parse_args(argv)
-    check_deployment(
+    actual_version = check_deployment(
         args.base_url,
         args.expected_version,
         attempts=args.attempts,
         delay_seconds=args.delay_seconds,
         timeout_seconds=args.timeout_seconds,
     )
-    print(f"deployment smoke passed for {args.expected_version}")
+    print(f"deployment smoke passed for {actual_version}")
     return 0
 
 
