@@ -1,5 +1,54 @@
 "use strict";
 
+const MESSAGES = {
+  unreachable: "Could not reach the service. Check your connection, then try again.",
+  refused: "The service could not answer that request.",
+};
+
+function showProblem(text) {
+  const box = document.getElementById("problem");
+  box.textContent = text;
+  box.hidden = false;
+}
+
+function clearProblem() {
+  const box = document.getElementById("problem");
+  box.hidden = true;
+  box.textContent = "";
+}
+
+function setBusy(busy) {
+  document.querySelector("main").setAttribute("aria-busy", String(busy));
+}
+
+async function getJSON(url) {
+  let response;
+  try {
+    response = await fetch(url);
+  } catch {
+    throw new Error(MESSAGES.unreachable);
+  }
+  if (!response.ok) throw new Error(MESSAGES.refused);
+  return response.json();
+}
+
+// localStorage throws outright where a browser blocks site data.
+function readTheme() {
+  try {
+    return localStorage.getItem("theme");
+  } catch {
+    return null;
+  }
+}
+
+function writeTheme(value) {
+  try {
+    localStorage.setItem("theme", value);
+  } catch {
+    // The toggle still works for this visit, it just will not be remembered.
+  }
+}
+
 // The bar is coloured from the real altitude curve, so the picture is the data.
 const BANDS = [
   { above: 6, colour: "--day" },
@@ -81,8 +130,8 @@ async function load() {
   const query = `place=${encodeURIComponent(place)}&on=${on}`;
 
   const [light, moon] = await Promise.all([
-    fetch(`/api/light?${query}`).then((r) => r.json()),
-    fetch(`/api/moon?${query}`).then((r) => r.json()),
+    getJSON(`/api/light?${query}`),
+    getJSON(`/api/moon?${query}`),
   ]);
 
   paintBar(light.curve);
@@ -126,13 +175,13 @@ function applyTheme(theme) {
 }
 
 function startTheme() {
-  applyTheme(localStorage.getItem("theme"));
+  applyTheme(readTheme());
   document.getElementById("theme").addEventListener("click", () => {
     const dark = document.documentElement.dataset.theme
       ? document.documentElement.dataset.theme === "dark"
       : matchMedia("(prefers-color-scheme: dark)").matches;
     const next = dark ? "light" : "dark";
-    localStorage.setItem("theme", next);
+    writeTheme(next);
     applyTheme(next);
   });
 }
@@ -142,7 +191,7 @@ async function start() {
   paintTicks();
   matchMedia("(max-width: 34rem)").addEventListener("change", paintTicks);
 
-  const places = await fetch("/api/places").then((r) => r.json());
+  const places = await getJSON("/api/places");
   const select = document.getElementById("place");
   select.innerHTML = places.places
     .map((p) => `<option value="${p.slug}">${p.name}, ${p.country}</option>`)
@@ -154,13 +203,21 @@ async function start() {
 
   const refresh = async () => {
     document.getElementById("note").textContent = notes[select.value];
-    await load();
+    setBusy(true);
+    try {
+      await load();
+      clearProblem();
+    } catch (problem) {
+      showProblem(problem.message);
+    } finally {
+      setBusy(false);
+    }
   };
 
   select.addEventListener("change", refresh);
   date.addEventListener("change", refresh);
 
-  const eclipses = await fetch("/api/eclipses?days=900").then((r) => r.json());
+  const eclipses = await getJSON("/api/eclipses?days=900");
   document.getElementById("eclipses").innerHTML = eclipses.eclipses
     .slice(0, 5)
     .map((e) => `<li>${e.at.slice(0, 10)}, ${e.kind}</li>`)
@@ -169,4 +226,7 @@ async function start() {
   await refresh();
 }
 
-start();
+start().catch((problem) => {
+  setBusy(false);
+  showProblem(problem.message);
+});

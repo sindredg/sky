@@ -8,6 +8,7 @@
   --moon-disc: #e3dac6;
   --moon-lit: #23283f;
   --edge: rgb(0 0 0 / 12%);
+  --alert: #9d2f26;
 
   --night: #10162c;
   --astronomical: #1b2547;
@@ -28,6 +29,8 @@
     --moon-disc: #2a2721;
     --moon-lit: #f0e6d2;
     --edge: rgb(255 255 255 / 14%);
+  --alert: #e8897f;
+    --alert: #e8897f;
   }
 }
 
@@ -233,4 +236,18 @@ footer { margin-top: 4rem; padding-top: 1.5rem; border-top: 1px solid var(--rule
   .bar { height: 4rem; }
 
   .verdict { font-size: 1.15rem; }
+}
+
+.problem {
+  color: var(--alert);
+  border-left: 3px solid var(--alert);
+  padding-left: 0.75rem;
+  margin: 1rem 0;
+}
+
+[aria-busy="true"] .light,
+[aria-busy="true"] .times,
+[aria-busy="true"] .moon {
+  opacity: 0.45;
+  transition: opacity 120ms ease-in;
 }

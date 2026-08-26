@@ -14,7 +14,12 @@
   <button id="theme" type="button" aria-pressed="false">Dark</button>
 </header>
 
-<main>
+<noscript>
+  <p class="problem">This page asks the service for each day's numbers and draws
+    them, so it needs JavaScript switched on.</p>
+</noscript>
+
+<main aria-busy="false">
   <form id="controls" autocomplete="off">
     <label>
       <span>Place</span>
@@ -27,6 +32,7 @@
   </form>
 
   <p id="note" class="note"></p>
+  <p id="problem" class="problem" role="alert" hidden></p>
 
   <section class="light" aria-labelledby="light-heading">
     <h2 id="light-heading" class="sr-only">The day in light</h2>
