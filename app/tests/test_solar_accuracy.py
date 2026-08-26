@@ -62,3 +62,45 @@ def test_solar_noon_lands_near_midday_at_every_place():
         hours = highest.hour + highest.minute / 60.0
 
         assert abs(hours - 12.0) < 2.5, f"{place.slug} peaks at {highest:%H:%M}"
+
+
+# Same Horizons query, azimuth column. Measured from north, increasing east.
+HORIZONS_AZIMUTH = (
+    (36.4618, 25.3753, datetime(2026, 6, 21, 0, tzinfo=UTC), 25.420690),
+    (36.4618, 25.3753, datetime(2026, 6, 21, 6, tzinfo=UTC), 83.824264),
+    (36.4618, 25.3753, datetime(2026, 6, 21, 12, tzinfo=UTC), 245.696155),
+    (36.4618, 25.3753, datetime(2026, 6, 21, 18, tzinfo=UTC), 303.439290),
+)
+
+
+@pytest.mark.parametrize(("latitude", "longitude", "when", "azimuth"), HORIZONS_AZIMUTH)
+def test_solar_azimuth_matches_jpl_horizons(latitude, longitude, when, azimuth):
+    """Direction is what tells a reader where to face, so it is checked too."""
+    from app.src import sky
+
+    position = _solar_equatorial(when)
+    _, found = sky.equatorial_to_horizontal(when, *position, latitude, longitude)
+
+    assert abs(found - azimuth) <= TOLERANCE_DEGREES
+
+
+def _solar_equatorial(when):
+    """Right ascension and declination in radians, as sun.altitude derives them."""
+    import math
+
+    from app.src import sky
+
+    n = sky.days_since_j2000(when)
+    mean_longitude = (280.460 + 0.9856474 * n) % 360.0
+    mean_anomaly = math.radians((357.528 + 0.9856003 * n) % 360.0)
+    ecliptic = math.radians(
+        mean_longitude
+        + 1.915 * math.sin(mean_anomaly)
+        + 0.020 * math.sin(2 * mean_anomaly)
+    )
+    obliquity = math.radians(23.439 - 0.0000004 * n)
+
+    return (
+        math.atan2(math.cos(obliquity) * math.sin(ecliptic), math.cos(ecliptic)),
+        math.asin(math.sin(obliquity) * math.sin(ecliptic)),
+    )
