@@ -3,15 +3,22 @@
 **[See it running](https://ca-aca-prod-production.yellowglacier-15588c53.norwayeast.azurecontainerapps.io)**
 
 This repository demonstrates a production-oriented delivery pipeline for Azure
-Container Apps. Golden Hour is deliberately the vehicle: a small FastAPI
-workload used to exercise infrastructure, identity, build, deployment,
-verification, and monitoring end to end.
+Container Apps. Golden Hour is the workload it ships: a planner whose answers
+are derived rather than fetched.
+
+Sunrise at Reine on 12 June 2074 is already determined. It follows from orbital
+mechanics, so no service has to stay up and no key has to be rotated for the
+answer to stay correct. That makes it an unusually clean vehicle for exercising
+infrastructure, identity, build, deployment, verification and monitoring: there
+is nothing in the application that can rot, so when something breaks it is the
+pipeline.
 
 The application calculates sunlight and moon data for 17 places. It handles
 midnight sun and polar night by sampling altitude once per minute instead of
 assuming the sun crosses the horizon.
 
-Calculations run locally. The application has no external API or database.
+No external API, no database, no API key. The same question returns the same
+answer.
 
 The deployed service scales to zero, so the first request after an idle period
 waits a few seconds while a replica starts.
@@ -72,6 +79,11 @@ Five geocentric lunar positions in 2026 are checked against NASA JPL
 within 3 arcminutes in ecliptic longitude and latitude. This bounded check is
 not a general accuracy guarantee. Rise and set times also use one-minute
 sampling and simplified horizon corrections.
+
+The arithmetic is permanent. The delivery is not, and the distinction is worth
+stating: daylight saving rules are political rather than astronomical, so IANA
+timezone data genuinely needs updating, and the runtime dependencies and base
+image need security patches. Dependabot watches all three.
 
 Eclipse results report occurrence and kind. Path, magnitude, and local
 visibility require full ephemerides and are outside the current scope.
