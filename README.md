@@ -1,10 +1,15 @@
 # Golden Hour
 
+**[See it running](https://ca-aca-prod-production.yellowglacier-15588c53.norwayeast.azurecontainerapps.io)**
+
 Golden Hour is a FastAPI application that calculates sunlight and moon data for
-nine places. It handles midnight sun and polar night by sampling altitude once
+17 places. It handles midnight sun and polar night by sampling altitude once
 per minute instead of assuming the sun crosses the horizon.
 
 Calculations run locally. The application has no external API or database.
+
+The deployed service scales to zero, so the first request after an idle period
+waits a few seconds while a replica starts.
 
 ## Features
 
@@ -58,10 +63,26 @@ limited to one-minute resolution by the sampling interval.
 Eclipse results report occurrence and kind. Path, magnitude, and local
 visibility require full ephemerides and are outside the current scope.
 
-## Deployment status
+## Deployment
 
-The application, container runtime, and Terraform bootstrap are implemented.
-The Azure platform foundation is pending review. Nothing is deployed yet.
+The service runs on Azure Container Apps at
+[ca-aca-prod-production.yellowglacier-15588c53.norwayeast.azurecontainerapps.io](https://ca-aca-prod-production.yellowglacier-15588c53.norwayeast.azurecontainerapps.io).
+
+Three Terraform states, split by how often each changes and who may apply it:
+
+| State | Owns | Applied by |
+|---|---|---|
+| `bootstrap` | State backend, workload identities, every role assignment | A human, once |
+| `platform` | Resource group, registry, Log Analytics, Container Apps environment | The pipeline |
+| `application` | The container app, its ingress and scaling | The pipeline |
+
+The pipeline holds Contributor and cannot create role assignments, so it cannot
+widen its own permissions. Four workload identities authenticate through GitHub
+OIDC, each trusted on exactly one subject: pull request plans, image push,
+production deployment, and image pull at runtime.
+
+Images deploy by digest, never by tag, so the running revision names one exact
+artifact. `/version` reports the commit that produced it.
 
 Architecture decisions and rejected alternatives are recorded in
 [docs/decisions](docs/decisions/).
