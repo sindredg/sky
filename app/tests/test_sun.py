@@ -197,3 +197,48 @@ def test_northern_shortest_day_falls_inside_the_polar_night():
 
     assert shortest["daylight_minutes"] == 0
     assert darkest["polar_night"] is True
+
+
+def test_the_northern_extremes_grow_with_latitude():
+    """Further north is both a longer midnight sun and a longer polar night."""
+    spans = []
+    for latitude, longitude, zone in (
+        (*LOFOTEN, "Europe/Oslo"),
+        (*TROMSO, "Europe/Oslo"),
+        (*SVALBARD, "Arctic/Longyearbyen"),
+    ):
+        summary = sun.season(date(2026, 1, 1), 365, latitude, longitude, tz=zone)[
+            "summary"
+        ]
+        spans.append(
+            (
+                sum(span["days"] for span in summary["midnight_sun_ranges"]),
+                sum(span["days"] for span in summary["polar_night_ranges"]),
+            )
+        )
+
+    assert spans[0][0] < spans[1][0] < spans[2][0]
+    assert spans[0][1] < spans[1][1] < spans[2][1]
+
+
+def test_svalbard_has_no_astronomical_darkness_in_june():
+    found = sun.season(date(2026, 6, 1), 30, *SVALBARD, tz="Arctic/Longyearbyen")
+
+    assert found["summary"]["astronomical_darkness_minutes"] == 0
+
+
+def test_december_darkness_covers_most_of_a_svalbard_month():
+    period_minutes = 30 * 24 * 60
+    found = sun.season(date(2026, 12, 1), 30, *SVALBARD, tz="Arctic/Longyearbyen")
+    darkness = found["summary"]["astronomical_darkness_minutes"]
+
+    assert period_minutes / 2 < darkness <= period_minutes
+
+
+def test_darkness_shrinks_toward_the_equator_in_june():
+    """Quito keeps a short night all year; Oslo trades it for twilight."""
+    quito = sun.season(date(2026, 6, 1), 30, *QUITO, tz="America/Guayaquil")
+    oslo = sun.season(date(2026, 6, 1), 30, *OSLO, tz="Europe/Oslo")
+
+    assert oslo["summary"]["astronomical_darkness_minutes"] == 0
+    assert quito["summary"]["astronomical_darkness_minutes"] > 0
