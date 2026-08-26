@@ -133,15 +133,22 @@ select, input[type="date"] {
 }
 
 .ticks {
-  display: grid;
+  position: relative;
+  height: 1rem;
   margin-top: 0.4rem;
   color: var(--faded);
   font-family: system-ui, sans-serif;
   font-size: 0.7rem;
 }
 
-.ticks span:not(:first-child) { text-align: center; }
-.ticks span:last-child { text-align: right; }
+.ticks span {
+  position: absolute;
+  transform: translateX(-50%);
+}
+
+/* The two end labels tuck inside the bar instead of overhanging it. */
+.ticks span:first-child { transform: none; }
+.ticks span:last-child { transform: translateX(-100%); }
 
 .verdict {
   margin: 1.5rem 0 0;
