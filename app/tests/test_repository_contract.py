@@ -55,3 +55,19 @@ def test_the_test_client_uses_the_supported_http_library():
     # Starlette 1.6 deprecated httpx for its test client in favour of httpx2.
     assert "httpx2==" in requirements
     assert "\nhttpx==" not in requirements
+
+
+def test_the_readme_counts_the_places_correctly():
+    from app.src.places import PLACES
+
+    readme = (ROOT / "README.md").read_text()
+
+    # The count drifted from nine to seventeen without the README noticing.
+    assert f"{len(PLACES)} places" in readme
+
+
+def test_the_readme_links_the_running_service():
+    readme = (ROOT / "README.md").read_text()
+
+    assert "azurecontainerapps.io" in readme
+    assert "Nothing is deployed yet" not in readme
