@@ -20,9 +20,17 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
+      - name: read the runtime version from the Dockerfile
+        id: runtime
+        run: |
+          set -euo pipefail
+          version=$(sed -n 's/^FROM python:\([0-9]*\.[0-9]*\)\..*/\1/p' Dockerfile)
+          test -n "$version"
+          echo "python=$version" >> "$GITHUB_OUTPUT"
+
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
-          python-version: '3.12'
+          python-version: ${{ steps.runtime.outputs.python }}
           cache: pip
           cache-dependency-path: app/requirements-dev.txt
 
@@ -43,9 +51,17 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
+      - name: read the runtime version from the Dockerfile
+        id: runtime
+        run: |
+          set -euo pipefail
+          version=$(sed -n 's/^FROM python:\([0-9]*\.[0-9]*\)\..*/\1/p' Dockerfile)
+          test -n "$version"
+          echo "python=$version" >> "$GITHUB_OUTPUT"
+
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
-          python-version: '3.12'
+          python-version: ${{ steps.runtime.outputs.python }}
 
       - name: install
         run: pip install ruff==0.16.4

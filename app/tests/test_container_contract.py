@@ -1,9 +1,13 @@
+import re
 from pathlib import Path
 
 ROOT = Path(__file__).parents[2]
-BASE_IMAGE = (
-    "python:3.12.14-slim-bookworm@"
-    "sha256:b64e9d3a71eddaa1b3f80c04abf292b3139e3b7c4dd272d19c31dc1f91194d1b"
+
+# Copying the exact image into the test only duplicates it. Assert the shape:
+# an exact patch version, a slim variant, and a digest so the tag cannot move.
+BASE_IMAGE = re.compile(
+    r"^FROM python:(?P<series>\d+\.\d+)\.\d+-slim-[a-z]+"
+    r"@sha256:[0-9a-f]{64}\n"
 )
 
 
@@ -14,7 +18,7 @@ def read(name: str) -> str:
 def test_dockerfile_pins_runtime_and_runs_non_root():
     dockerfile = read("Dockerfile")
 
-    assert dockerfile.startswith(f"FROM {BASE_IMAGE}\n")
+    assert BASE_IMAGE.match(dockerfile)
     assert "apt-get install --yes --no-install-recommends tzdata" in dockerfile
     assert "USER 10001:10001" in dockerfile
     assert "EXPOSE 8080" in dockerfile
@@ -75,3 +79,23 @@ def test_the_release_stamps_the_commit_into_the_image():
     workflow = (ROOT / ".github" / "workflows" / "release.yml").read_text()
 
     assert "--build-arg SERVICE_VERSION=$GITHUB_SHA" in workflow
+
+
+def runtime_series() -> str:
+    found = BASE_IMAGE.match(read("Dockerfile"))
+    assert found, "the Dockerfile does not pin a digest"
+    return found.group("series")
+
+
+def test_the_tests_run_on_the_python_that_ships():
+    workflow = read(".github/workflows/ci.yml")
+
+    # Hardcoding a version here lets a base image bump ship an untested runtime.
+    assert "python-version: '3." not in workflow
+    assert "steps.runtime.outputs.python" in workflow
+    assert "FROM python:" in workflow
+
+
+def test_the_dockerfile_pins_a_specific_patch_release():
+    # A series tag such as python:3.12-slim would move underneath the digest.
+    assert runtime_series().count(".") == 1
