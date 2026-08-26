@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - 'app/**'
+      # .dockerignore keeps tests out of the image, so they cannot change it.
+      - '!app/tests/**'
       - 'Dockerfile'
       - '.dockerignore'
       - 'terraform/stacks/application/**'

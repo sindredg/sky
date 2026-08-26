@@ -1,14 +1,18 @@
 name: deploy
 
+# terraform/** would also match the application stack, which release.yml owns,
+# and the bootstrap root, which only a human applies.
 on:
   pull_request:
     paths:
-      - 'terraform/**'
+      - 'terraform/stacks/platform/**'
+      - 'terraform/environments/**'
       - '.github/workflows/deploy.yml'
   push:
     branches: [main]
     paths:
-      - 'terraform/**'
+      - 'terraform/stacks/platform/**'
+      - 'terraform/environments/**'
       - '.github/workflows/deploy.yml'
 
 permissions:
