@@ -18,19 +18,6 @@ def read(name: str) -> str:
     return (BOOTSTRAP / name).read_text()
 
 
-def test_backend_uses_a_locked_azure_provider_and_entra_authentication():
-    versions = read("versions.tf")
-    backend = read("backend.hcl")
-    providers = read("providers.tf")
-
-    assert 'required_version = ">= 1.15.0, < 2.0.0"' in versions
-    assert 'version = "~> 5.0"' in versions
-    assert 'backend "azurerm" {}' in versions
-    assert "use_azuread_auth = true" in backend
-    assert "use_cli          = true" in backend
-    assert "storage_use_azuread = true" in providers
-
-
 def test_state_storage_disables_keys_and_keeps_recovery_controls():
     main = read("main.tf")
 

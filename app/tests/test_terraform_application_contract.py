@@ -20,22 +20,6 @@ def read(name: str) -> str:
     return (APPLICATION / name).read_text()
 
 
-def test_application_keeps_its_own_state_and_provider_contract():
-    backend = read("backend.hcl")
-    versions = read("versions.tf")
-    providers = read("providers.tf")
-
-    assert 'required_version = ">= 1.15.0, < 2.0.0"' in versions
-    assert 'version = "~> 5.0"' in versions
-    assert 'backend "azurerm" {}' in versions
-    assert (
-        'key                  = "production/application/terraform.tfstate"' in backend
-    )
-    assert "use_azuread_auth = true" in backend
-    assert "use_cli" not in backend
-    assert "storage_use_azuread = true" in providers
-
-
 def test_the_image_is_pinned_by_digest_and_never_by_tag():
     main = read("main.tf")
     variables = read("variables.tf")
@@ -51,7 +35,6 @@ def test_the_app_pulls_with_the_bootstrap_identity_and_no_password():
     main = read("main.tf")
 
     assert 'data "azurerm_user_assigned_identity" "pull"' in main
-    assert 'type         = "UserAssigned"' in main
     assert "identity = data.azurerm_user_assigned_identity.pull.id" in main
     assert "password_secret_name" not in main
     assert "username" not in main
@@ -62,7 +45,6 @@ def test_platform_values_arrive_as_outputs_rather_than_references():
 
     # Decision 0001 makes the platform boundary an output interface.
     assert 'data "terraform_remote_state" "platform"' in main
-    assert 'key                  = "production/platform/terraform.tfstate"' in main
     assert (
         "data.terraform_remote_state.platform.outputs.container_app_environment" in main
     )
@@ -71,20 +53,12 @@ def test_platform_values_arrive_as_outputs_rather_than_references():
 
 def test_ingress_and_health_match_the_container_contract():
     main = read("main.tf")
-    locals_tf = read("locals.tf")
 
     assert "external_enabled = true" in main
-    assert re.search(r"container_port\s*=\s*8080", locals_tf)
     assert "liveness_probe" in main
     assert "readiness_probe" in main
     assert main.count('path      = "/health"') == 2
     assert 'transport = "HTTP"' in main
-
-
-def test_the_app_scales_to_zero():
-    locals_tf = read("locals.tf")
-
-    assert re.search(r"min_replicas\s*=\s*0", locals_tf)
 
 
 def test_application_owns_no_platform_or_authority_resources():

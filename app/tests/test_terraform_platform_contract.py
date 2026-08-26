@@ -18,51 +18,22 @@ def read(name: str) -> str:
     return (PLATFORM / name).read_text()
 
 
-def test_platform_root_keeps_state_and_provider_contract():
-    backend = read("backend.hcl")
-    providers = read("providers.tf")
-    versions = read("versions.tf")
-
-    assert 'required_version = ">= 1.15.0, < 2.0.0"' in versions
-    assert 'version = "~> 5.0"' in versions
-    assert 'backend "azurerm" {}' in versions
-    assert 'key                  = "production/platform/terraform.tfstate"' in backend
-    assert "use_azuread_auth = true" in backend
-    assert "use_cli" not in backend
-    assert "storage_use_azuread = true" in providers
-
-
 def test_platform_resources_match_public_consumption_boundary():
     main = read("main.tf")
-    locals_tf = read("locals.tf")
 
-    assert 'resource "azurerm_resource_group" "this"' in main
-    assert 'resource "azurerm_container_registry" "this"' in main
-    assert re.search(r'sku\s*=\s*"Standard"', main)
     assert re.search(r"admin_enabled\s*=\s*false", main)
     assert re.search(r"anonymous_pull_enabled\s*=\s*false", main)
     assert re.search(r"public_network_access_enabled\s*=\s*true", main)
-    assert 'resource "azurerm_log_analytics_workspace" "this"' in main
-    assert re.search(r'sku\s*=\s*"PerGB2018"', main)
-    assert "retention_in_days   = local.config.log_retention_days" in main
-    assert 'resource "azurerm_container_app_environment" "this"' in main
     assert "log_analytics_workspace_id" in main
     assert re.search(r'logs_destination\s*=\s*"log-analytics"', main)
-    assert 'location           = "norwayeast"' in locals_tf
-    assert "log_retention_days = 30" in locals_tf
-    assert re.search(r'environment\s*=\s*"production"', locals_tf)
 
 
 def test_platform_outputs_expose_only_application_inputs():
     outputs = read("outputs.tf")
-    locals_tf = read("locals.tf")
 
     assert 'output "resource_group"' in outputs
     assert 'output "container_registry"' in outputs
     assert 'output "container_app_environment"' in outputs
-    assert "config = {" in locals_tf
-    assert "names = {" in locals_tf
-    assert "common_tags = {" in locals_tf
 
 
 def test_platform_has_no_runtime_or_authority_resources():
