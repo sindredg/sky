@@ -1,6 +1,6 @@
 """Assertions against physical facts, not against our own output."""
 
-from datetime import date
+from datetime import date, timedelta
 
 import pytest
 
@@ -95,3 +95,60 @@ def test_southern_daylight_saving_also_inverts():
     december = sun.day_events(DECEMBER, -50.9423, -73.4068, tz="America/Santiago")
     assert june["sunrise"].utcoffset().total_seconds() == -4 * 3600
     assert december["sunrise"].utcoffset().total_seconds() == -3 * 3600
+
+
+def test_season_requires_days_within_one_year():
+    with pytest.raises(ValueError, match="days must be between 1 and 366"):
+        sun.season(JUNE, 0, *LOFOTEN, tz="Europe/Oslo")
+
+    with pytest.raises(ValueError, match="days must be between 1 and 366"):
+        sun.season(JUNE, 367, *LOFOTEN, tz="Europe/Oslo")
+
+
+def test_lofoten_season_reports_the_midnight_sun_span():
+    found = sun.season(date(2026, 5, 1), 100, *LOFOTEN, tz="Europe/Oslo")
+    span = found["summary"]["midnight_sun_ranges"][0]
+
+    assert found["step_minutes"] == 5
+    assert len(found["series"]) == 100
+    assert span["start"] == date(2026, 5, 27)
+    assert date(2026, 7, 15) <= span["end"] <= date(2026, 7, 19)
+    assert span["days"] == (span["end"] - span["start"]).days + 1
+    assert found["summary"]["polar_night_ranges"] == []
+
+
+def test_santorini_has_no_polar_extremes_in_summer():
+    found = sun.season(date(2026, 6, 1), 30, 36.4618, 25.3753, tz="Europe/Athens")
+
+    assert found["summary"]["midnight_sun_ranges"] == []
+    assert found["summary"]["polar_night_ranges"] == []
+    assert all(not row["midnight_sun"] for row in found["series"])
+    assert all(not row["polar_night"] for row in found["series"])
+
+
+def test_southern_longest_day_lands_in_december():
+    found = sun.season(date(2026, 1, 1), 366, *SYDNEY, tz="Australia/Sydney")
+
+    assert found["summary"]["longest_day"]["date"].month == 12
+    assert found["summary"]["shortest_day"]["date"].month == 6
+    assert (
+        found["summary"]["longest_day"]["daylight_minutes"]
+        > found["summary"]["shortest_day"]["daylight_minutes"]
+    )
+
+
+def test_one_day_season_matches_day_events_within_a_minute():
+    day = date(2026, 6, 21)
+    row = sun.season(day, 1, 36.4618, 25.3753, tz="Europe/Athens")["series"][0]
+    events = sun.day_events(day, 36.4618, 25.3753, tz="Europe/Athens")
+
+    assert row["date"] == day
+    assert abs(row["sunrise"] - events["sunrise"]) <= timedelta(minutes=1)
+    assert abs(row["sunset"] - events["sunset"]) <= timedelta(minutes=1)
+    assert abs(
+        row["golden_hour_evening"][0] - events["golden_hour_evening"][0]
+    ) <= timedelta(minutes=1)
+    assert abs(
+        row["golden_hour_evening"][1] - events["golden_hour_evening"][1]
+    ) <= timedelta(minutes=1)
+    assert abs(row["daylight_minutes"] - events["daylight_minutes"]) <= 1
