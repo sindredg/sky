@@ -127,15 +127,36 @@ function moonPath(fraction, waxing, radius) {
   ].join(" ");
 }
 
+
+// The galactic centre is fixed, so the answer is latitude, season and moon.
+function describeCore(core) {
+  const span = (w) => `<b>${clock(w.start)}</b> and <b>${clock(w.end)}</b>`;
+  const lit = Math.round(core.moon.illumination * 100);
+
+  switch (core.reason) {
+    case "never_rises":
+      return "The core never clears the horizon at this latitude.";
+    case "too_low":
+      return `The core only reaches ${core.peak_altitude}\u00b0 here, too low to see through the atmosphere.`;
+    case "no_astronomical_darkness":
+      return "The sky never gets fully dark tonight, so the core stays hidden.";
+    case "moon_washes_it_out":
+      return `The core is up between ${span(core.window)}, but a ${lit}% moon washes it out.`;
+    default:
+      return `The core is high in dark sky between ${span(core.window)}.`;
+  }
+}
+
 async function load() {
   const place = document.getElementById("place").value;
   const date = document.getElementById("date");
   const on = date.value;
   const query = `place=${encodeURIComponent(place)}&on=${on}`;
 
-  const [light, moon] = await Promise.all([
+  const [light, moon, core] = await Promise.all([
     getJSON(`/api/light?${query}`),
     getJSON(`/api/moon?${query}`),
+    getJSON(`/api/milkyway?${query}`),
   ]);
 
   if (!on) date.value = light.date;
@@ -156,6 +177,13 @@ async function load() {
   document
     .getElementById("moon-lit")
     .setAttribute("d", moonPath(moon.illumination, waxing, 50));
+
+  document.getElementById("milkyway-verdict").innerHTML = describeCore(core);
+  rows("milkyway-facts", [
+    ["Highest tonight", `${core.peak_altitude}\u00b0`],
+    ["Best this latitude can do", `${core.highest_possible_altitude}\u00b0`],
+    ["Moon", `${Math.round(core.moon.illumination * 100)}% lit`],
+  ]);
 
   rows("moon-facts", [
     ["Phase", moon.phase],

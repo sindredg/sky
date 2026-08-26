@@ -51,6 +51,20 @@ class Sample:
     altitude: float
 
 
+def sample_between(
+    start: datetime,
+    end: datetime,
+    altitude_at: Callable[[datetime], float],
+    step_minutes: int = 1,
+) -> list[Sample]:
+    """One altitude per step across an explicit span."""
+    elapsed_minutes = int((end - start).total_seconds() // 60)
+    steps = elapsed_minutes // step_minutes
+    moments = (start + timedelta(minutes=m * step_minutes) for m in range(steps + 1))
+
+    return [Sample(at, altitude_at(at)) for at in moments]
+
+
 def sample_day(
     day: date,
     altitude_at: Callable[[datetime], float],
@@ -62,18 +76,13 @@ def sample_day(
     local_start = datetime(day.year, day.month, day.day, tzinfo=zone)
     tomorrow = day + timedelta(days=1)
     local_end = datetime(tomorrow.year, tomorrow.month, tomorrow.day, tzinfo=zone)
-    start = local_start.astimezone(UTC)
-    end = local_end.astimezone(UTC)
-    elapsed_minutes = int((end - start).total_seconds() // 60)
-    steps = elapsed_minutes // step_minutes
 
-    return [
-        Sample(
-            start + timedelta(minutes=m * step_minutes),
-            altitude_at(start + timedelta(minutes=m * step_minutes)),
-        )
-        for m in range(steps + 1)
-    ]
+    return sample_between(
+        local_start.astimezone(UTC),
+        local_end.astimezone(UTC),
+        altitude_at,
+        step_minutes,
+    )
 
 
 def _interpolate(first: Sample, second: Sample, threshold: float) -> datetime:

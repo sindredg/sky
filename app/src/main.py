@@ -8,8 +8,8 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 
+from . import galaxy, sky, sun
 from . import moon as lunar
-from . import sky, sun
 from .places import BY_SLUG, PLACES
 
 SERVICE_VERSION = os.getenv("SERVICE_VERSION", "0.0.0-local")
@@ -150,6 +150,37 @@ async def moon(
         "phase_angle": events["phase_angle"],
         "illumination": events["illumination"],
         "age_days": events["age_days"],
+    }
+
+
+@app.get("/api/milkyway")
+async def milkyway(
+    place: str | None = None,
+    lat: float | None = Query(None, ge=-90, le=90),
+    lon: float | None = Query(None, ge=-180, le=180),
+    on: str | None = None,
+    tz: float = Query(0.0, ge=-12, le=14),
+) -> dict:
+    latitude, longitude, zone, label = _resolve(place, lat, lon, tz)
+    day = _parse_day(on, zone)
+    found = galaxy.core_window(day, latitude, longitude, zone)
+    window = found["window"]
+
+    return {
+        "location": label,
+        "date": day.isoformat(),
+        "timezone": str(zone),
+        "peak_altitude": found["peak_altitude"],
+        "highest_possible_altitude": round(galaxy.peak_altitude(latitude), 1),
+        "window": None
+        if window is None
+        else {"start": _iso(window["start"]), "end": _iso(window["end"])},
+        "reason": found["reason"],
+        "moon": found["moon"],
+        "note": (
+            "The galactic centre is a fixed point, so what changes is where you "
+            "stand and when you look."
+        ),
     }
 
 
