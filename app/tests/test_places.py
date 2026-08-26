@@ -39,3 +39,35 @@ def test_every_place_has_a_note():
     for place in PLACES:
         assert place.note.strip()
         assert place.note.endswith(".")
+
+
+def test_teide_and_barcelona_are_present_and_correctly_located():
+    teide = BY_SLUG["teide"]
+    assert teide.country == "Spain"
+    assert 28.1 < teide.latitude < 28.4
+    assert teide.timezone == "Atlantic/Canary"
+
+    barcelona = BY_SLUG["barcelona"]
+    assert barcelona.country == "Spain"
+    assert 41.3 < barcelona.latitude < 41.5
+    assert barcelona.timezone == "Europe/Madrid"
+
+
+def test_the_canaries_keep_their_own_timezone():
+    # Atlantic/Canary is an hour behind Europe/Madrid, so the mainland zone
+    # would put every Teide time an hour out.
+    assert BY_SLUG["teide"].timezone != BY_SLUG["barcelona"].timezone
+
+
+def test_svalbard_is_the_furthest_north():
+    assert BY_SLUG["svalbard"].latitude == max(p.latitude for p in PLACES)
+    assert BY_SLUG["svalbard"].latitude > 66.56
+
+
+def test_the_list_reaches_both_hemispheres():
+    assert any(p.latitude > 66.56 for p in PLACES)
+    assert any(p.latitude < 0 for p in PLACES)
+
+
+def test_places_are_spread_across_more_than_one_country():
+    assert len({p.country for p in PLACES}) >= 8
