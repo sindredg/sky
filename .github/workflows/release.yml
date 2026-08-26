@@ -9,6 +9,7 @@ on:
       - '!app/tests/**'
       - 'Dockerfile'
       - '.dockerignore'
+      - 'scripts/deployment_smoke.py'
       - 'terraform/stacks/application/**'
       - '.github/workflows/release.yml'
   workflow_dispatch:
@@ -103,6 +104,18 @@ jobs:
           terraform -chdir=terraform/stacks/application apply -input=false -no-color
           -auto-approve -var=image_digest=${{ needs.build.outputs.digest }}
 
-      - name: report the deployed revision
+      - name: read application URL
+        id: application
+        shell: bash
+        run: |
+          set -euo pipefail
+          url=$(terraform -chdir=terraform/stacks/application output -raw application_url)
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "$url"
+
+      - name: verify the public deployment
+        env:
+          APPLICATION_URL: ${{ steps.application.outputs.url }}
         run: >-
-          terraform -chdir=terraform/stacks/application output -raw application_url
+          python3 scripts/deployment_smoke.py
+          "$APPLICATION_URL" "$GITHUB_SHA"
