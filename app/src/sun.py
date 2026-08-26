@@ -17,6 +17,9 @@ GOLDEN_UPPER = 6.0
 GOLDEN_LOWER = -4.0
 BLUE_LOWER = -6.0
 
+# Below this the sky is as dark as it gets, so faint objects are reachable.
+ASTRONOMICAL = -18.0
+
 # Enough points to draw a smooth gradient without shipping 1440 numbers.
 CURVE_STEP_MINUTES = 10
 SEASON_STEP_MINUTES = 5
@@ -67,6 +70,12 @@ def _minutes_above(samples: list[sky.Sample], threshold: float) -> float:
             total += minutes * (crossing if above_first else 1.0 - crossing)
 
     return total
+
+
+def _minutes_below(samples: list[sky.Sample], threshold: float) -> float:
+    """The rest of the sampled span, so a local day of 23 or 25 hours still fits."""
+    span = (samples[-1].at - samples[0].at).total_seconds() / 60.0
+    return span - _minutes_above(samples, threshold)
 
 
 def _events_from_samples(
@@ -152,6 +161,7 @@ def season(
 
     zone = sky.as_timezone(tz)
     series = []
+    darkness_minutes = 0.0
 
     for offset in range(days):
         day = from_day + timedelta(days=offset)
@@ -162,6 +172,7 @@ def season(
             step_minutes=SEASON_STEP_MINUTES,
         )
         events = _events_from_samples(samples, zone)
+        darkness_minutes += _minutes_below(samples, ASTRONOMICAL)
         series.append(
             {
                 "date": day,
@@ -193,5 +204,6 @@ def season(
             },
             "midnight_sun_ranges": _ranges(series, "midnight_sun"),
             "polar_night_ranges": _ranges(series, "polar_night"),
+            "astronomical_darkness_minutes": round(darkness_minutes),
         },
     }
