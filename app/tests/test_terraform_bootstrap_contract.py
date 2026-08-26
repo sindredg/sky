@@ -86,6 +86,36 @@ def test_plan_and_deploy_identities_have_different_fixed_permissions():
     )
 
 
+def test_the_pull_identity_is_scoped_to_the_registry_only():
+    identities = read("identities.tf")
+
+    assert 'resource "azurerm_user_assigned_identity" "pull"' in identities
+    assert 'role_definition_name             = "AcrPull"' in identities
+    assert (
+        "scope                            = data.azurerm_container_registry.platform.id"
+        in identities
+    )
+
+
+def test_the_pull_identity_cannot_push_or_delete_images():
+    identities = read("identities.tf")
+
+    for forbidden in ("AcrPush", "AcrDelete", "AcrImageSigner"):
+        assert f'"{forbidden}"' not in identities
+
+
+def test_the_registry_is_resolved_by_name_not_by_a_hardcoded_id():
+    identities = read("identities.tf")
+    variables = read("variables.tf")
+
+    # A literal registry ID would carry the subscription ID into a tracked file.
+    assert 'data "azurerm_container_registry" "platform"' in identities
+    assert "var.container_registry_name" in identities
+    assert "var.platform_resource_group_name" in identities
+    assert 'variable "container_registry_name"' in variables
+    assert 'variable "platform_resource_group_name"' in variables
+
+
 def test_tracked_bootstrap_has_no_subscription_uuid_or_runtime_artifact():
     files = [path for path in artifacts("*") if path.is_file()]
     tracked_text = "\n".join(
