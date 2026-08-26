@@ -79,7 +79,9 @@ def test_monrovia_barely_changes_length_across_the_year():
     from app.src import sun
 
     place = BY_SLUG["monrovia"]
-    june = sun.day_events(date(2026, 6, 21), place.latitude, place.longitude, place.timezone)
+    june = sun.day_events(
+        date(2026, 6, 21), place.latitude, place.longitude, place.timezone
+    )
     december = sun.day_events(
         date(2026, 12, 21), place.latitude, place.longitude, place.timezone
     )
