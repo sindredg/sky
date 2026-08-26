@@ -75,7 +75,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for root in terraform/bootstrap terraform/stacks/platform; do
+          for root in terraform/bootstrap terraform/stacks/platform terraform/stacks/application; do
             terraform -chdir="$root" init -backend=false -input=false
             terraform -chdir="$root" validate -no-color
           done
