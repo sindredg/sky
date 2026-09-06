@@ -1,17 +1,4 @@
-# Golden Hour
-
-**[See it running](https://ca-aca-prod-production.yellowglacier-15588c53.norwayeast.azurecontainerapps.io)**
-
-This repository demonstrates a production-oriented delivery pipeline for Azure
-Container Apps. Golden Hour is the workload it ships: a planner whose answers
-are derived rather than fetched.
-
-Sunrise at Reine on 12 June 2074 is already determined. It follows from orbital
-mechanics, so no service has to stay up and no key has to be rotated for the
-answer to stay correct. That makes it an unusually clean vehicle for exercising
-infrastructure, identity, build, deployment, verification and monitoring: there
-is nothing in the application that can rot, so when something breaks it is the
-pipeline.
+# Sky
 
 The application calculates sunlight and moon data for 23 places. It handles
 midnight sun and polar night by sampling altitude once per minute instead of
@@ -19,9 +6,6 @@ assuming the sun crosses the horizon.
 
 No external API, no database, no API key. The same question returns the same
 answer.
-
-The deployed service scales to zero, so the first request after an idle period
-waits a few seconds while a replica starts.
 
 ## Features
 
@@ -95,27 +79,3 @@ automated contracts. This is an owner-maintained project, so those pull
 requests are not independent peer review unless another reviewer participates.
 Green CI demonstrates that the checked contracts pass. It is not external
 validation of the architecture or astronomy.
-
-## Deployment
-
-The service runs on Azure Container Apps at
-[ca-aca-prod-production.yellowglacier-15588c53.norwayeast.azurecontainerapps.io](https://ca-aca-prod-production.yellowglacier-15588c53.norwayeast.azurecontainerapps.io).
-
-Three Terraform states, split by how often each changes and who may apply it:
-
-| State | Owns | Applied by |
-|---|---|---|
-| `bootstrap` | State backend, workload identities, every role assignment | A human, twice during the first deployment |
-| `platform` | Resource group, registry, Log Analytics, Container Apps environment | The pipeline |
-| `application` | The container app, its ingress and scaling | The pipeline |
-
-The pipeline holds Contributor and cannot create role assignments, so it cannot
-widen its own permissions. Four workload identities authenticate through GitHub
-OIDC, each trusted on exactly one subject: pull request plans, image push,
-production deployment, and image pull at runtime.
-
-Images deploy by digest, never by tag, so the running revision names one exact
-artifact. `/version` reports the commit that produced it.
-
-Architecture decisions and rejected alternatives are recorded in
-[docs/decisions](docs/decisions/).
