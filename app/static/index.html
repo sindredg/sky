@@ -1,78 +1,43 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Golden Hour</title>
-<link rel="stylesheet" href="/static/styles.css">
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101312"><meta name="description" content="A personal observatory. Explore the solar system, discover your night sky, and travel through cosmic scale with real astronomical math.">
+  <title>Sky — Your personal observatory</title><link rel="icon" href="/static/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-
-<header>
-  <h1>Golden&nbsp;Hour</h1>
-  <p class="strap">When the light is worth the walk.</p>
-  <button id="theme" type="button" aria-pressed="false">Dark</button>
-</header>
-
-<noscript>
-  <p class="problem">This page asks the service for each day's numbers and draws
-    them, so it needs JavaScript switched on.</p>
-</noscript>
-
-<main aria-busy="false">
-  <form id="controls" autocomplete="off">
-    <label>
-      <span>Place</span>
-      <select id="place"></select>
-    </label>
-    <label>
-      <span>Date</span>
-      <input id="date" type="date">
-    </label>
-  </form>
-
-  <p id="note" class="note"></p>
-  <p id="problem" class="problem" role="alert" hidden></p>
-
-  <section class="light" aria-labelledby="light-heading">
-    <h2 id="light-heading" class="sr-only">The day in light</h2>
-    <div id="bar" class="bar" role="img" aria-label="The day coloured by the sun's altitude"></div>
-    <div id="ticks" class="ticks"></div>
-    <p id="verdict" class="verdict"></p>
-  </section>
-
-  <section class="times">
-    <dl id="times"></dl>
-  </section>
-
-  <section class="moon">
-    <svg id="moon" viewBox="-60 -60 120 120" aria-hidden="true">
-      <circle cx="0" cy="0" r="50" class="moon-dark"/>
-      <path id="moon-lit" class="moon-lit" d=""/>
-    </svg>
-    <dl id="moon-facts"></dl>
-  </section>
-
-  <section class="milkyway">
-    <h2>The Milky Way</h2>
-    <p class="caveat">Our galaxy's bright centre, in Sagittarius. It only shows
-      when it is high, the sky is dark, and the moon is out of the way.</p>
-    <p id="milkyway-verdict" class="verdict"></p>
-    <dl id="milkyway-facts"></dl>
-  </section>
-
-  <section class="eclipses">
-    <h2>Coming eclipses</h2>
-    <ol id="eclipses"></ol>
-    <p class="caveat">Occurrence only. Whether one is visible from a given place
-      needs full ephemerides, which this does not attempt.</p>
-  </section>
-</main>
-
-<footer>
-  <p>Positions are computed, never fetched. Same question, same answer, forever.</p>
-</footer>
-
-<script src="/static/app.js" defer></script>
+  <header class="header">
+    <a href="/sky" class="brand" aria-label="Sky home"><img src="/static/favicon.svg" alt="" width="38" height="38"><span>sky<span class="brand-dot">.</span></span></a>
+    <nav class="main-nav" aria-label="Observatory views">
+      <button class="nav-button active" data-view="solar"><span data-icon="orbit"></span>Solar system</button>
+      <button class="nav-button" data-view="sky"><span data-icon="stars"></span>Night sky</button>
+      <button class="nav-button" data-view="scale"><span data-icon="expand"></span>Cosmic scale</button>
+    </nav>
+    <div class="header-actions"><button id="search-button" class="icon-button" aria-label="Search celestial objects" title="Search objects ( / )"><span data-icon="search"></span></button><button id="location-button" class="location-button"><span data-icon="pin"></span><span id="location-name">Oslo, Norway</span><span class="location-dot"></span></button></div>
+  </header>
+  <main>
+    <section class="intro"><div><div class="eyebrow"><span class="tiny-star">✳</span> A LITTLE CURIOSITY. A WHOLE UNIVERSE.</div><h1 id="page-title">Your universe, <em>in motion.</em></h1><p id="page-description">Explore our celestial neighborhood. Grounded in science. Driven by wonder.</p></div><button class="subtle-button" id="science-button"><span data-icon="book"></span>The science behind it<span class="arrow">↗</span></button></section>
+    <div class="workspace">
+      <section class="observatory" aria-label="Interactive astronomical visualization">
+        <div class="scene-top"><div><div class="scene-eyebrow" id="scene-eyebrow">THE SOLAR SYSTEM</div><div class="scene-subtitle"><span class="status-dot"></span><span id="scene-subtitle">Heliocentric view</span></div></div><div class="scene-actions"><button id="tour-button" class="small-button"><span data-icon="play"></span><span id="tour-label">Take a tour</span></button><button id="fullscreen-button" class="icon-button" aria-label="Toggle fullscreen" title="Fullscreen"><span data-icon="expand"></span></button></div></div>
+        <canvas id="universe" tabindex="0" aria-label="Solar system map. Select planets using the object buttons below. Drag to rotate; scroll to zoom."></canvas>
+        <div id="sky-note" class="sky-note" hidden></div>
+        <div class="scene-controls"><div class="toggle-group"><button id="orbits-toggle" class="toggle active" aria-pressed="true"><span data-icon="orbit"></span><span id="orbits-label">Orbits</span></button><button id="labels-toggle" class="toggle active" aria-pressed="true"><span data-icon="label"></span>Labels</button><button id="projection-toggle" class="toggle" aria-pressed="false"><span data-icon="layers"></span>Top view</button></div><div class="zoom-controls"><button class="icon-button" id="zoom-out" aria-label="Zoom out">−</button><span id="zoom-value">100%</span><button class="icon-button" id="zoom-in" aria-label="Zoom in">+</button><button class="icon-button" id="reset-view" aria-label="Reset view" title="Reset view"><span data-icon="reset"></span></button></div></div>
+        <div class="scene-caption"><span id="scene-hint"><span data-icon="mouse"></span>Drag to rotate · Scroll to explore</span><button id="distance-toggle" class="text-button">Distances compressed <span>↗</span></button></div>
+        <div id="scale-controls" class="scale-controls" hidden><label for="scale-slider">FROM HOME TO THE STARS <span id="scale-progress">01 / 08</span></label><input type="range" id="scale-slider" min="0" max="7" step="1" value="0"><div class="scale-endpoints"><span>Earth</span><span>The Milky Way</span></div></div>
+      </section>
+      <aside class="inspector" aria-label="Selected celestial object"><div class="inspector-label"><span id="inspector-eyebrow">IN FOCUS</span><button id="bookmark-button" class="icon-button" aria-label="Save Earth" title="Save object"><span data-icon="bookmark"></span></button></div><div class="planet-preview"><canvas id="portrait" width="560" height="330" role="img" aria-label="Artistic illustration of Earth"></canvas><span class="portrait-caption" id="portrait-caption">THIRD PLANET FROM THE SUN</span></div><div class="object-heading"><div><h2 id="object-name">Earth</h2><span id="object-type" class="object-type">Terrestrial planet</span></div><span id="object-symbol" class="object-symbol">♁</span></div><p class="object-description" id="object-description"></p><div class="stats-grid" id="stats-grid"></div><div class="insight"><span data-icon="spark"></span><p id="object-fact"></p></div><button id="focus-button" class="primary-button"><span data-icon="target"></span><span id="focus-label">Focus on Earth</span><span class="arrow">↗</span></button><div class="inspector-foot" id="inspector-foot">A familiar place. A new perspective.</div></aside>
+      <section class="time-panel" aria-label="Simulation time controls"><div class="time-main"><div class="time-heading"><span class="eyebrow">TIME MACHINE</span><button id="now-button" class="now-button"><span class="status-dot"></span>Now</button></div><button id="date-button" class="date-button"><span id="date-display"></span><span data-icon="calendar"></span></button><span id="time-display" class="mono"></span></div><div class="time-playback"><div class="play-controls"><button id="step-back" class="icon-button" aria-label="Go back one day" title="Previous day"><span data-icon="back"></span></button><button id="play-button" class="play-button" aria-label="Play simulation"><span data-icon="play"></span></button><button id="step-forward" class="icon-button" aria-label="Go forward one day" title="Next day"><span data-icon="forward"></span></button><span class="divider"></span><label class="sr-only" for="speed">Simulation speed</label><select id="speed"><option value="3600">1 hour / sec</option><option value="86400" selected>1 day / sec</option><option value="864000">10 days / sec</option><option value="2592000">30 days / sec</option></select></div><div class="timeline"><span id="timeline-start"></span><input type="range" min="-182" max="182" value="0" step=".05" id="timeline" aria-label="Explore dates around the selected date"><span id="timeline-end"></span></div></div></section>
+      <div class="light-card"><span class="light-icon" data-icon="sun"></span><div><span class="eyebrow" id="light-title">A MESSAGE FROM THE SUN</span><p id="light-copy">Sunlight takes <strong id="light-time">8m 19s</strong> to reach Earth.</p></div></div>
+    </div>
+    <section class="object-section"><div class="section-heading"><h3 id="object-section-title">Meet the neighbors<span>08 PLANETS. ENDLESS PERSPECTIVES.</span></h3><button id="saved-toggle" class="text-button"><span data-icon="bookmark"></span><span id="saved-label">Saved objects</span></button></div><div id="object-list" class="object-list"></div><p id="empty-saved" class="empty-state" hidden>No saved objects yet. Select an object and use the bookmark to keep it here.</p></section>
+    <footer><span><span class="footer-star">✳</span> Keep looking up.</span><span>Real math. Remarkable universe.<span class="footer-separator">/</span><button id="about-button" class="text-button">About this observatory ↗</button></span></footer>
+  </main>
+  <dialog id="search-dialog"><div class="dialog-header"><h2>Find your next discovery</h2><button class="icon-button close-dialog" aria-label="Close search">×</button></div><label for="search-input" class="sr-only">Search planets and stars</label><div class="search-field"><span data-icon="search"></span><input id="search-input" placeholder="Try Saturn, Vega, or Orion…" autocomplete="off"></div><div id="search-results" class="search-results"></div><p class="dialog-hint">Search planets, bright stars, and constellations.</p></dialog>
+  <dialog id="location-dialog"><div class="dialog-header"><h2>Your place in the universe</h2><button class="icon-button close-dialog" aria-label="Close location settings">×</button></div><p>The night sky changes with where you stand. Choose a city or enter your coordinates.</p><div class="city-presets"><button data-city="Oslo, Norway" data-lat="59.9139" data-lon="10.7522">Oslo</button><button data-city="London, UK" data-lat="51.5074" data-lon="-.1278">London</button><button data-city="New York, USA" data-lat="40.7128" data-lon="-74.006">New York</button><button data-city="Sydney, Australia" data-lat="-33.8688" data-lon="151.2093">Sydney</button><button data-city="Atacama, Chile" data-lat="-23.863" data-lon="-69.133">Atacama</button></div><form id="location-form"><div class="form-row"><label>Latitude<input type="number" id="latitude" min="-90" max="90" step="any" value="59.9139" required></label><label>Longitude<input type="number" id="longitude" min="-180" max="180" step="any" value="10.7522" required></label></div><button class="primary-button" type="submit">Set observing location <span>↗</span></button></form><button id="geolocation-button" class="subtle-button"><span data-icon="target"></span>Use my current location</button><p id="location-status" role="status" class="dialog-hint">Coordinates stay in this browser.</p></dialog>
+  <dialog id="date-dialog"><div class="dialog-header"><h2>A moment in time</h2><button class="icon-button close-dialog" aria-label="Close date settings">×</button></div><p>Travel through the solar system from 1800 to the start of 2050.</p><form id="date-form"><label>Date and time in UTC<input id="date-input" type="datetime-local" min="1800-01-01T00:00" max="2050-01-01T00:00" required></label><button class="primary-button" type="submit">Travel to this moment <span>↗</span></button></form><div class="city-presets"><button data-date="1969-07-20T20:17:00Z">Apollo 11 landing</button><button data-date="2000-01-01T12:00:00Z">J2000 epoch</button><button data-date="2021-12-25T12:20:00Z">Webb launch</button></div><p class="dialog-hint" id="date-error" role="status">All dates are shown in UTC, independent of observing location.</p></dialog>
+  <dialog id="science-dialog" class="science-dialog"><div class="dialog-header"><div><div class="eyebrow">BUILT ON SOMETHING REAL</div><h2>Wonder, with the math to match.</h2></div><button class="icon-button close-dialog" aria-label="Close science information">×</button></div><p>Sky is a small, self-contained observatory. Every orbit is calculated in your browser, with no live astronomy service required.</p><div class="science-block"><span>01</span><div><h3>The planets follow Kepler.</h3><div class="equation">M = E − e sin E</div><p>We solve Kepler’s equation with NASA JPL’s published orbital elements and century rates. Positions use the J2000 ecliptic frame and are restricted to 1800–2050. Earth represents the Earth–Moon barycenter; UTC approximates ephemeris time.</p><a href="https://ssd.jpl.nasa.gov/planets/approx_pos.html" target="_blank" rel="noreferrer">NASA JPL · Orbital model ↗</a></div></div><div class="science-block"><span>02</span><div><h3>Your sky starts where you are.</h3><div class="equation">sin h = sin φ sin δ + cos φ cos δ cos H</div><p>Fixed bright-star coordinates, approximate precession, and local sidereal time give altitude and azimuth for your location. This is a curated 50-star map, not a complete star atlas. Refraction, nutation, and proper motion are omitted; stellar distances are rounded estimates.</p><a href="https://aa.usno.navy.mil/faq/alt_az" target="_blank" rel="noreferrer">US Naval Observatory · Sky coordinates ↗</a></div></div><div class="science-block"><span>03</span><div><h3>Space needs a little perspective.</h3><p>By default, orbital distances use a power curve to make every planet visible. Switch to proportional distances for a shared linear distance scale. Planet sizes and surface illustrations are artistic in both modes. Background stars and the asteroid belt in solar view are decorative.</p><a href="https://ssd.jpl.nasa.gov/planets/phys_par.html" target="_blank" rel="noreferrer">NASA JPL · Planetary measurements ↗</a></div></div><p class="dialog-hint">An educational explorer with approximate positions, not a navigation or precision telescope tool. Shortcuts: Space to play / pause · / to search · Esc to close.</p></dialog>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script type="module" src="/static/app.js"></script>
 </body>
 </html>
