@@ -1,4 +1,4 @@
-import {planets, stars, constellationLines, orbitalPosition, starPosition, scaleStops, RAD} from './astronomy.js';
+import {planets, stars, constellationLines, orbitalPosition, starPosition, scaleStops, RAD, subsolarPoint, altitudeFrom, lightPhase} from './astronomy.js';
 
 const textures=new Map();
 const fract=n=>n-Math.floor(n);
@@ -13,15 +13,22 @@ const continents=[
   [[-55,60],[-22,68],[-29,82],[-53,83],[-66,73]],
   [[-180,-73],[-125,-77],[-60,-69],[0,-74],[85,-70],[140,-76],[180,-73],[180,-90],[-180,-90]]
 ];
+// The continent outlines rasterised once at two pixels per degree. Both the baked
+// planet texture and the live globe read land from this same mask.
+let landMask=null;
+function landData(){
+  if(landMask)return landMask;
+  const map=document.createElement('canvas');map.width=720;map.height=360;const m=map.getContext('2d');m.fillStyle='#fff';
+  for(const poly of continents){m.beginPath();poly.forEach(([lon,lat],i)=>m[i?'lineTo':'moveTo']((lon+180)*2,(90-lat)*2));m.closePath();m.fill();}
+  landMask=m.getImageData(0,0,720,360).data;
+  return landMask;
+}
+const isLand=(lat,lon)=>landData()[(Math.min(359,Math.max(0,Math.floor((90-lat)*2)))*720+Math.min(719,Math.max(0,Math.floor((lon+180)*2))))*4+3]>0;
 function makeTexture(p) {
   const size=240, c=document.createElement('canvas');c.width=c.height=size;
   const ctx=c.getContext('2d'), data=ctx.createImageData(size,size);
   let land;
-  if(p.id==='earth') {
-    const map=document.createElement('canvas');map.width=720;map.height=360;const m=map.getContext('2d');m.fillStyle='#fff';
-    for(const poly of continents){m.beginPath();poly.forEach(([lon,lat],i)=>m[i?'lineTo':'moveTo']((lon+180)*2,(90-lat)*2));m.closePath();m.fill();}
-    land=m.getImageData(0,0,720,360).data;
-  }
+  if(p.id==='earth')land=landData();
   const rgb=p.color.match(/\w\w/g).map(v=>parseInt(v,16));
   for(let y=0;y<size;y++)for(let x=0;x<size;x++){
     const nx=(x-size/2)/(size/2),ny=(y-size/2)/(size/2),rr=nx*nx+ny*ny;
@@ -49,6 +56,37 @@ function makeTexture(p) {
   }
   ctx.putImageData(data,0,0);return c;
 }
+// Where each phase of light shows up as a pin.
+export const phaseColors={day:'#ffe4a3',golden:'#f2a445',blue:'#7ea6e0',twilight:'#8298b2',night:'#d3e2f4'};
+export const phaseNames={day:'Daylight',golden:'Golden hour',blue:'Blue hour',twilight:'Twilight',night:'Night'};
+
+// One orientation of the globe, sampled once. Between frames only the Sun moves, so
+// each sample keeps the terms that reduce its solar altitude to a few multiplies
+// instead of solving the Sun's position again a hundred thousand times a second.
+const globe={key:''};
+function globeSamples(n,tilt,spin){
+  const key=`${n}|${tilt.toFixed(2)}|${spin.toFixed(2)}`;
+  if(globe.key===key)return globe;
+  const count=n*n;
+  const sinLat=new Float32Array(count),ca=new Float32Array(count),cb=new Float32Array(count);
+  const base=new Float32Array(count*3),alpha=new Float32Array(count),edge=new Float32Array(count);
+  const sinF=Math.sin(tilt*RAD),cosF=Math.cos(tilt*RAD);
+  for(let py=0;py<n;py++)for(let px=0;px<n;px++){
+    const i=py*n+px,x=(px+.5)/n*2-1,y=1-(py+.5)/n*2,rr=x*x+y*y;
+    if(rr>1)continue;
+    const nz=Math.sqrt(1-rr);
+    const lat=Math.asin(Math.max(-1,Math.min(1,nz*sinF+y*cosF)))/RAD;
+    const lon=(((spin+Math.atan2(x,nz*cosF-y*sinF)/RAD)+180)%360+360)%360-180;
+    const nse=noise(lon*RAD*12,lat*RAD*12);
+    let c=isLand(lat,lon)?[83+nse*22,105+nse*21,78+nse*18]:[32+nse*7,73+nse*10,104+nse*14];
+    if(Math.abs(lat)>76+noise(lon*RAD*5,lat*RAD*2)*7)c=[188,203,203];
+    base[i*3]=c[0];base[i*3+1]=c[1];base[i*3+2]=c[2];
+    const cosLat=Math.cos(lat*RAD);
+    sinLat[i]=Math.sin(lat*RAD);ca[i]=cosLat*Math.cos(lon*RAD);cb[i]=cosLat*Math.sin(lon*RAD);
+    alpha[i]=Math.min(1,(1-rr)*n*.4);edge[i]=Math.pow(1-nz,4);
+  }
+  return Object.assign(globe,{key,n,sinLat,ca,cb,base,alpha,edge});
+}
 export function drawPlanet(ctx,p,x,y,r,glow=true){
   if(!textures.has(p.id))textures.set(p.id,makeTexture(p));
   ctx.save();
@@ -69,17 +107,24 @@ export function renderPortrait(canvas,item,mode){
 
 export class UniverseRenderer{
   constructor(canvas,state,onSelect){
-    this.canvas=canvas;this.ctx=canvas.getContext('2d');this.state=state;this.onSelect=onSelect;this.width=800;this.height=570;this.hits=[];this.rotation=-.35;this.zoom=1;this.top=false;this.focus=null;this.drag=null;
+    this.canvas=canvas;this.ctx=canvas.getContext('2d');this.state=state;this.onSelect=onSelect;this.width=800;this.height=570;this.hits=[];this.rotation=-.35;this.zoom=1;this.top=false;this.focus=null;this.drag=null;this.spin=10;this.tilt=22;
     this.background=Array.from({length:730},(_,i)=>({x:random(i+10),y:random(i+990),r:random(i+447)*.8+.15,a:random(i+650)*.38+.1}));
     this.observer=new ResizeObserver(()=>this.resize());this.observer.observe(canvas);
-    canvas.addEventListener('pointerdown',e=>{this.drag={x:e.clientX,y:e.clientY,start:e.clientX,moved:false};canvas.setPointerCapture(e.pointerId);});
+    canvas.addEventListener('pointerdown',e=>{this.drag={x:e.clientX,y:e.clientY,start:e.clientX,startY:e.clientY,moved:false};canvas.setPointerCapture(e.pointerId);});
     canvas.addEventListener('pointermove',e=>{
-      if(this.drag){const dx=e.clientX-this.drag.x;if(Math.abs(e.clientX-this.drag.start)>4)this.drag.moved=true;if(state.view==='solar'){this.rotation+=dx*.006;this.drag.x=e.clientX;this.draw();}}
+      if(this.drag){
+        const dx=e.clientX-this.drag.x,dy=e.clientY-this.drag.y;
+        if(Math.hypot(e.clientX-this.drag.start,e.clientY-this.drag.startY)>4)this.drag.moved=true;
+        if(state.view==='solar'){this.rotation+=dx*.006;this.drag.x=e.clientX;this.draw();}
+        // Spinning the globe east and tilting it, stopping short of the poles where an
+        // orthographic view degenerates and the pins pile onto one another.
+        else if(state.view==='earth'){this.spin-=dx*.32;this.tilt=Math.max(-78,Math.min(78,this.tilt+dy*.28));this.drag.x=e.clientX;this.drag.y=e.clientY;this.draw();}
+      }
       else{const box=canvas.getBoundingClientRect();canvas.style.cursor=this.hits.some(p=>Math.hypot(e.clientX-box.left-p.x,e.clientY-box.top-p.y)<p.radius)?'pointer':'grab';}
     });
     canvas.addEventListener('pointerup',e=>{if(this.drag&&!this.drag.moved){const box=canvas.getBoundingClientRect();const hit=this.hits.find(p=>Math.hypot(e.clientX-box.left-p.x,e.clientY-box.top-p.y)<p.radius);if(hit)this.onSelect(hit.id);}this.drag=null;});
     canvas.addEventListener('pointercancel',()=>this.drag=null);
-    canvas.addEventListener('wheel',e=>{if(state.view!=='solar')return;e.preventDefault();this.setZoom(this.zoom*Math.exp(-e.deltaY*.001));this.onZoom?.();},{passive:false});
+    canvas.addEventListener('wheel',e=>{if(state.view!=='solar'&&state.view!=='earth')return;e.preventDefault();this.setZoom(this.zoom*Math.exp(-e.deltaY*.001));this.onZoom?.();},{passive:false});
   }
   resize(){const box=this.canvas.getBoundingClientRect();this.width=box.width;this.height=box.height;const dpr=Math.min(devicePixelRatio||1,2);this.canvas.width=Math.round(box.width*dpr);this.canvas.height=Math.round(box.height*dpr);this.ctx.setTransform(dpr,0,0,dpr,0,0);this.draw();}
   setZoom(z){this.zoom=Math.max(.5,Math.min(5,z));this.draw();}
@@ -89,7 +134,15 @@ export class UniverseRenderer{
     ctx.clearRect(0,0,w,h);ctx.fillStyle='#0b100d';ctx.fillRect(0,0,w,h);this.hits=[];this.labelBoxes=[];
     const glow=ctx.createRadialGradient(w*.49,h*.47,0,w*.49,h*.47,w*.7);glow.addColorStop(0,'#18241d');glow.addColorStop(.5,'#0d1611');glow.addColorStop(1,'#090d0c');ctx.fillStyle=glow;ctx.fillRect(0,0,w,h);
     if(this.state.view!=='sky')for(const s of this.background){ctx.fillStyle=`rgba(181,199,182,${s.a})`;ctx.beginPath();ctx.arc(s.x*w,s.y*h,s.r,0,Math.PI*2);ctx.fill();}
-    if(this.state.view==='solar')this.drawSolar();else if(this.state.view==='sky')this.drawSky();else this.drawScale();
+    if(this.state.view==='solar')this.drawSolar();else if(this.state.view==='sky')this.drawSky();else if(this.state.view==='earth')this.drawEarth();else this.drawScale();
+  }
+  // Orthographic projection of the visible hemisphere. Null means the point has turned
+  // away, which is what keeps pins from bleeding through the far side.
+  globePoint(lat,lon,cx,cy,R){
+    const f1=this.tilt*RAD,f=lat*RAD,d=(lon-this.spin)*RAD;
+    const depth=Math.sin(f1)*Math.sin(f)+Math.cos(f1)*Math.cos(f)*Math.cos(d);
+    if(depth<=.015)return null;
+    return {x:cx+Math.cos(f)*Math.sin(d)*R,y:cy-(Math.cos(f1)*Math.sin(f)-Math.sin(f1)*Math.cos(f)*Math.cos(d))*R,depth};
   }
   project(pos){
     const w=this.width,h=this.height,flat=this.top?1:.64;
@@ -162,6 +215,67 @@ export class UniverseRenderer{
       this.hits.push({id:s.id,x,y,radius:13});
     }
     ctx.textAlign='center';ctx.font='8px "DM Sans",sans-serif';ctx.fillStyle='#587250';ctx.fillText('LOOKING UP · ZENITH AT CENTER',cx,cy+r+44);
+  }
+  drawEarth(){
+    const ctx=this.ctx,w=this.width,h=this.height,cx=w*.5,cy=h*.47;
+    const R=Math.min(w*.33,(h-165)*.45)*this.zoom;
+    const sun=subsolarPoint(this.state.date);
+    const n=Math.max(96,Math.min(256,Math.round(R*1.3)));
+    const g=globeSamples(n,this.tilt,this.spin);
+    if(!this.globeCanvas)this.globeCanvas=document.createElement('canvas');
+    if(this.globeCanvas.width!==n){this.globeCanvas.width=this.globeCanvas.height=n;this.globeImage=null;}
+    const gctx=this.globeCanvas.getContext('2d');
+    if(!this.globeImage)this.globeImage=gctx.createImageData(n,n);
+    // Only the Sun has moved since the samples were built, so a frame is one pass of
+    // multiplies. SIN6 is sin(6°): working in the sine avoids an arcsine per pixel.
+    const out=this.globeImage.data,SIN6=.104528;
+    const sinDec=Math.sin(sun.lat*RAD),cosDec=Math.cos(sun.lat*RAD),cosLam=Math.cos(sun.lon*RAD),sinLam=Math.sin(sun.lon*RAD);
+    for(let i=0,count=n*n;i<count;i++){
+      const a=g.alpha[i],o=i*4;
+      if(!a){out[o+3]=0;continue;}
+      const sinAlt=g.sinLat[i]*sinDec+(g.ca[i]*cosLam+g.cb[i]*sinLam)*cosDec;
+      const shade=.17+.83*Math.max(0,Math.min(1,(sinAlt+SIN6)/(SIN6*2)));
+      const gold=Math.max(0,1-Math.abs(sinAlt)/.14),edge=g.edge[i]*36;
+      out[o]=g.base[i*3]*shade+gold*74+edge*.3;
+      out[o+1]=g.base[i*3+1]*shade+gold*46+edge*.85;
+      out[o+2]=g.base[i*3+2]*shade+gold*9+edge;
+      out[o+3]=a*255;
+    }
+    gctx.putImageData(this.globeImage,0,0);
+    const halo=ctx.createRadialGradient(cx,cy,R*.92,cx,cy,R*1.3);halo.addColorStop(0,'#86b4d426');halo.addColorStop(1,'#86b4d400');ctx.fillStyle=halo;ctx.beginPath();ctx.arc(cx,cy,R*1.3,0,Math.PI*2);ctx.fill();
+    ctx.drawImage(this.globeCanvas,cx-R,cy-R,R*2,R*2);
+    // The latitude the galactic centre never climbs above, reported by the API for the
+    // selected place. One line says what a paragraph otherwise has to.
+    const band=this.state.milkyLatitude;
+    if(Number.isFinite(band)){
+      ctx.save();ctx.setLineDash([4,5]);ctx.strokeStyle='#bcaae8aa';ctx.lineWidth=1;ctx.beginPath();
+      let drawn=false;
+      for(let lon=-180;lon<=180;lon+=2){const p=this.globePoint(band,lon,cx,cy,R);if(!p){drawn=false;continue;}ctx[drawn?'lineTo':'moveTo'](p.x,p.y);drawn=true;}
+      ctx.stroke();ctx.restore();
+    }
+    const pins=[];
+    for(const place of this.state.places||[]){
+      const p=this.globePoint(place.latitude,place.longitude,cx,cy,R);
+      if(!p)continue;
+      pins.push({place,...p,phase:lightPhase(altitudeFrom(sun,place.latitude,place.longitude))});
+    }
+    // Nearer pins are drawn last so they sit over the ones turning away behind them.
+    pins.sort((a,b)=>a.depth-b.depth);
+    for(const pin of pins){
+      const selected=pin.place.slug===this.state.selectedPlace,color=phaseColors[pin.phase],r=selected?5.5:3.6;
+      if(selected){ctx.strokeStyle='#e2eed4';ctx.lineWidth=.9;ctx.beginPath();ctx.arc(pin.x,pin.y,r+7,0,Math.PI*2);ctx.stroke();}
+      const glow=ctx.createRadialGradient(pin.x,pin.y,0,pin.x,pin.y,r*4);glow.addColorStop(0,color+'88');glow.addColorStop(1,color+'00');ctx.fillStyle=glow;ctx.beginPath();ctx.arc(pin.x,pin.y,r*4,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle=color;ctx.strokeStyle='#0c110f';ctx.lineWidth=1.1;ctx.beginPath();ctx.arc(pin.x,pin.y,r,0,Math.PI*2);ctx.fill();ctx.stroke();
+      this.hits.push({id:'place:'+pin.place.slug,x:pin.x,y:pin.y,radius:14});
+      this.labelBoxes.push({left:pin.x-r-3,top:pin.y-r-3,right:pin.x+r+3,bottom:pin.y+r+3});
+    }
+    if(this.state.labels){
+      const selected=pins.find(p=>p.place.slug===this.state.selectedPlace);
+      if(selected)this.mapLabel(selected.place.name,selected.x,selected.y,6,true,phaseNames[selected.phase].toUpperCase());
+      for(const pin of pins.filter(p=>p!==selected).sort((a,b)=>b.depth-a.depth).slice(0,7))this.mapLabel(pin.place.name,pin.x,pin.y,4);
+    }
+    ctx.textAlign='center';ctx.font='8px "DM Sans",sans-serif';ctx.fillStyle='#587250';
+    ctx.fillText(`SUN OVERHEAD AT ${Math.abs(sun.lat).toFixed(1)}°${sun.lat>=0?'N':'S'} · ${Math.abs(sun.lon).toFixed(1)}°${sun.lon>=0?'E':'W'}`,cx,Math.min(h-14,cy+R+32));
   }
   drawScale(){
     const ctx=this.ctx,w=this.width,h=this.height,stop=scaleStops[this.state.scale],cx=w/2,cy=h*.42,r=Math.min(w*.19,h*.19);
