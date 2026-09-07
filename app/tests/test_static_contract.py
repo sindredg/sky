@@ -45,12 +45,19 @@ def test_every_referenced_asset_is_shipped():
     assert missing == [], f"referenced but not present: {missing}"
 
 
-def test_module_imports_resolve_beside_the_entry_point():
-    # A bare or root-absolute specifier does not resolve from /static/app.js.
-    specifiers = re.findall(r'^import .*? from \'([^\']+)\'', read("app.js"), re.M)
+def test_every_module_import_resolves_to_something_shipped():
+    # A bare or root-absolute specifier does not resolve from /static/, and an import
+    # of a file that was never shipped fails in the browser rather than here.
+    problems = []
+    for module in sorted(STATIC.glob("*.js")):
+        source = module.read_text(encoding="utf-8")
+        for specifier in re.findall(r"^import .*? from '([^']+)'", source, re.M):
+            if not specifier.startswith("./"):
+                problems.append(f"{module.name}: {specifier} is not relative")
+            elif not (STATIC / specifier.removeprefix("./")).exists():
+                problems.append(f"{module.name}: {specifier} is not shipped")
 
-    assert specifiers, "the entry point imports nothing, which is unexpected"
-    assert all(spec.startswith("./") for spec in specifiers), specifiers
+    assert problems == [], problems
 
 
 def test_every_navigation_view_is_wired_to_a_title_and_a_drawing():
