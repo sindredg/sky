@@ -83,11 +83,34 @@ export function starPosition(star,date,lat,lon) {
   const p=precess(star.ra,star.dec,date);
   return horizontalCoordinates(p.ra,p.dec,date,lat,lon);
 }
-export function sunAltitude(date,lat,lon) {
+export function sunEquatorial(date) {
   const earth=orbitalPosition(planets[2],date), eps=23.43928*RAD;
   const x=-earth.x,y=-earth.y*Math.cos(eps)+earth.z*Math.sin(eps),z=-earth.y*Math.sin(eps)-earth.z*Math.cos(eps);
-  const eq=precess(wrap(Math.atan2(y,x)/RAD)/15,Math.atan2(z,Math.hypot(x,y))/RAD,date);
+  return precess(wrap(Math.atan2(y,x)/RAD)/15,Math.atan2(z,Math.hypot(x,y))/RAD,date);
+}
+export function sunAltitude(date,lat,lon) {
+  const eq=sunEquatorial(date);
   return horizontalCoordinates(eq.ra,eq.dec,date,lat,lon).altitude;
+}
+// The point with the Sun straight overhead. horizontalCoordinates puts the hour angle
+// at zero exactly here, so its longitude is the right ascension carried into the
+// rotating frame, and every other place on Earth is an angular distance from it.
+export function subsolarPoint(date) {
+  const eq=sunEquatorial(date);
+  return {lat:eq.dec, lon:wrap(eq.ra*15-siderealDegrees(date)+180)-180};
+}
+// Solar altitude from a subsolar point already computed for that instant. Shading a
+// globe needs one of these per pixel per frame, which rules out solving the Sun's
+// position again for each of them.
+export function altitudeFrom(sun,lat,lon) {
+  const a=lat*RAD, b=sun.lat*RAD, H=(lon-sun.lon)*RAD;
+  return Math.asin(Math.max(-1,Math.min(1,Math.sin(a)*Math.sin(b)+Math.cos(a)*Math.cos(b)*Math.cos(H))))/RAD;
+}
+// Names for the light, using the thresholds the planner already reports against:
+// golden hour reaches a little above the horizon, blue hour sits below it, and
+// astronomical twilight ends at -18.
+export function lightPhase(altitude) {
+  return altitude>6?'day':altitude>-4?'golden':altitude>-6?'blue':altitude>-18?'twilight':'night';
 }
 // Bright-star J2000 coordinates, rounded; distance in light-years, magnitude in V.
 export const stars = [
