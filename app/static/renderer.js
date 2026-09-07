@@ -1,34 +1,34 @@
 import {planets, stars, constellationLines, orbitalPosition, starPosition, scaleStops, RAD, subsolarPoint, altitudeFrom, lightPhase} from './astronomy.js';
+import {landMask, isLand} from './world.js';
 
 const textures=new Map();
 const fract=n=>n-Math.floor(n);
 function random(seed) { return fract(Math.sin(seed*127.1+311.7)*43758.5453); }
 function noise(x,y) { return Math.sin(x*3.1+Math.sin(y*5.3))*Math.cos(y*2.7+Math.sin(x*4.2)); }
-const continents=[
-  [[-168,70],[-130,72],[-110,80],[-65,60],[-54,48],[-82,24],[-98,17],[-117,32],[-126,50],[-155,58]],
-  [[-81,12],[-65,8],[-48,-1],[-35,-8],[-42,-24],[-59,-39],[-70,-55],[-76,-37],[-80,-10]],
-  [[-17,35],[9,38],[34,31],[52,12],[42,-3],[33,-26],[18,-35],[10,-15],[-3,5],[-17,15]],
-  [[-10,36],[-7,58],[23,71],[47,66],[76,75],[125,72],[179,65],[155,47],[130,31],[110,18],[102,2],[78,8],[67,26],[42,38],[27,41]],
-  [[112,-12],[137,-10],[153,-23],[146,-39],[124,-34],[113,-24]],
-  [[-55,60],[-22,68],[-29,82],[-53,83],[-66,73]],
-  [[-180,-73],[-125,-77],[-60,-69],[0,-74],[85,-70],[140,-76],[180,-73],[180,-90],[-180,-90]]
-];
-// The continent outlines rasterised once at two pixels per degree. Both the baked
-// planet texture and the live globe read land from this same mask.
-let landMask=null;
-function landData(){
-  if(landMask)return landMask;
-  const map=document.createElement('canvas');map.width=720;map.height=360;const m=map.getContext('2d');m.fillStyle='#fff';
-  for(const poly of continents){m.beginPath();poly.forEach(([lon,lat],i)=>m[i?'lineTo':'moveTo']((lon+180)*2,(90-lat)*2));m.closePath();m.fill();}
-  landMask=m.getImageData(0,0,720,360).data;
-  return landMask;
+// Four texels per degree. The baked planet texture and the live globe read land from
+// this one mask, so the Earth in the solar view and the Earth on the globe are the
+// same coastline.
+const LAND = () => landMask(1440);
+
+// Ground colour by latitude, which is most of what separates a green world from a
+// convincing one: the Sahara, the Gobi and the Australian interior all sit in the same
+// dry band, and the boreal belt reads grey-green rather than grass.
+const BIOME=[[0,[74,116,64]],[12,[114,134,72]],[20,[176,150,96]],[30,[156,144,88]],[38,[100,124,70]],[50,[84,110,76]],[62,[94,114,94]],[70,[152,156,144]],[76,[214,224,228]],[90,[228,236,240]]];
+function ground(lat){
+  const a=Math.abs(lat);
+  for(let i=1;i<BIOME.length;i++){
+    if(a<=BIOME[i][0]){
+      const [lo,c0]=BIOME[i-1],[hi,c1]=BIOME[i],k=(a-lo)/(hi-lo);
+      return [c0[0]+(c1[0]-c0[0])*k,c0[1]+(c1[1]-c0[1])*k,c0[2]+(c1[2]-c0[2])*k];
+    }
+  }
+  return BIOME[BIOME.length-1][1];
 }
-const isLand=(lat,lon)=>landData()[(Math.min(359,Math.max(0,Math.floor((90-lat)*2)))*720+Math.min(719,Math.max(0,Math.floor((lon+180)*2))))*4+3]>0;
 function makeTexture(p) {
   const size=240, c=document.createElement('canvas');c.width=c.height=size;
   const ctx=c.getContext('2d'), data=ctx.createImageData(size,size);
   let land;
-  if(p.id==='earth')land=landData();
+  if(p.id==='earth')land=LAND();
   const rgb=p.color.match(/\w\w/g).map(v=>parseInt(v,16));
   for(let y=0;y<size;y++)for(let x=0;x<size;x++){
     const nx=(x-size/2)/(size/2),ny=(y-size/2)/(size/2),rr=nx*nx+ny*ny;
@@ -37,8 +37,7 @@ function makeTexture(p) {
     let color=[...rgb];
     if(p.id==='earth'){
       const longitude=(lon/RAD+20+540)%360-180,latitude=lat/RAD;
-      const mi=(Math.min(359,Math.floor((90-latitude)*2))*720+Math.min(719,Math.floor((longitude+180)*2)))*4;
-      color=land[mi+3]>0?[83+n*22,105+n*21,78+n*18]:[32+n*7,73+n*10,104+n*14];
+      color=isLand(land,latitude,longitude)?ground(latitude).map(v=>v+n*9):[26+n*7,62+n*10,96+n*14];
       const clouds=Math.sin(lon*5+lat*13+Math.sin(lat*7)*1.2)+Math.sin(lon*12-lat*9)*.3;
       if(clouds>.87){const mix=(clouds-.87)*1.5;color=color.map(v=>v*(1-mix)+213*mix);}
       if(Math.abs(latitude)>76+noise(lon*5,lat*2)*7)color=[188,203,203];
@@ -67,9 +66,9 @@ const globe={key:''};
 function globeSamples(n,tilt,spin){
   const key=`${n}|${tilt.toFixed(2)}|${spin.toFixed(2)}`;
   if(globe.key===key)return globe;
-  const count=n*n;
+  const mask=LAND(),count=n*n;
   const sinLat=new Float32Array(count),ca=new Float32Array(count),cb=new Float32Array(count);
-  const base=new Float32Array(count*3),alpha=new Float32Array(count),edge=new Float32Array(count);
+  const base=new Float32Array(count*3),alpha=new Float32Array(count),edge=new Float32Array(count),water=new Uint8Array(count);
   const sinF=Math.sin(tilt*RAD),cosF=Math.cos(tilt*RAD);
   for(let py=0;py<n;py++)for(let px=0;px<n;px++){
     const i=py*n+px,x=(px+.5)/n*2-1,y=1-(py+.5)/n*2,rr=x*x+y*y;
@@ -77,15 +76,28 @@ function globeSamples(n,tilt,spin){
     const nz=Math.sqrt(1-rr);
     const lat=Math.asin(Math.max(-1,Math.min(1,nz*sinF+y*cosF)))/RAD;
     const lon=(((spin+Math.atan2(x,nz*cosF-y*sinF)/RAD)+180)%360+360)%360-180;
-    const nse=noise(lon*RAD*12,lat*RAD*12);
-    let c=isLand(lat,lon)?[83+nse*22,105+nse*21,78+nse*18]:[32+nse*7,73+nse*10,104+nse*14];
-    if(Math.abs(lat)>76+noise(lon*RAD*5,lat*RAD*2)*7)c=[188,203,203];
+    const grain=noise(lon*RAD*9,lat*RAD*9);
+    let c;
+    if(isLand(mask,lat,lon)){
+      c=ground(lat);
+      // A little relief, and enough longitude drift to keep the latitude bands from
+      // reading as stripes.
+      const v=grain*5+noise(lon*RAD*15,lat*RAD*13)*2.5;
+      c=[c[0]+v,c[1]+v*1.1,c[2]+v*.7];
+    }else{
+      water[i]=1;
+      // Shelf water where a neighbouring texel is land, which is what stops every
+      // coast from being a hard edge between navy and grass.
+      const shelf=isLand(mask,lat+.9,lon)||isLand(mask,lat-.9,lon)||isLand(mask,lat,lon+.9/Math.max(.2,Math.cos(lat*RAD)))||isLand(mask,lat,lon-.9/Math.max(.2,Math.cos(lat*RAD)));
+      c=shelf?[48,110,148]:[26,64,108];
+      c=[c[0]+grain*2,c[1]+grain*2.5,c[2]+grain*3];
+    }
     base[i*3]=c[0];base[i*3+1]=c[1];base[i*3+2]=c[2];
     const cosLat=Math.cos(lat*RAD);
     sinLat[i]=Math.sin(lat*RAD);ca[i]=cosLat*Math.cos(lon*RAD);cb[i]=cosLat*Math.sin(lon*RAD);
-    alpha[i]=Math.min(1,(1-rr)*n*.4);edge[i]=Math.pow(1-nz,4);
+    alpha[i]=Math.min(1,(1-rr)*n*.5);edge[i]=Math.pow(1-nz,3.2);
   }
-  return Object.assign(globe,{key,n,sinLat,ca,cb,base,alpha,edge});
+  return Object.assign(globe,{key,n,sinLat,ca,cb,base,alpha,edge,water});
 }
 export function drawPlanet(ctx,p,x,y,r,glow=true){
   if(!textures.has(p.id))textures.set(p.id,makeTexture(p));
@@ -220,29 +232,42 @@ export class UniverseRenderer{
     const ctx=this.ctx,w=this.width,h=this.height,cx=w*.5,cy=h*.47;
     const R=Math.min(w*.33,(h-165)*.45)*this.zoom;
     const sun=subsolarPoint(this.state.date);
-    const n=Math.max(96,Math.min(256,Math.round(R*1.3)));
+    // Rebuilding the cache costs a trigonometric solve per sample, so a drag runs at a
+    // coarser grid and the detail returns when the globe is let go.
+    const n=this.drag?160:Math.max(128,Math.min(384,Math.round(R*1.7)));
     const g=globeSamples(n,this.tilt,this.spin);
     if(!this.globeCanvas)this.globeCanvas=document.createElement('canvas');
     if(this.globeCanvas.width!==n){this.globeCanvas.width=this.globeCanvas.height=n;this.globeImage=null;}
     const gctx=this.globeCanvas.getContext('2d');
     if(!this.globeImage)this.globeImage=gctx.createImageData(n,n);
     // Only the Sun has moved since the samples were built, so a frame is one pass of
-    // multiplies. SIN6 is sin(6°): working in the sine avoids an arcsine per pixel.
-    const out=this.globeImage.data,SIN6=.104528;
+    // multiplies. Everything is expressed in the sine of the solar altitude, which
+    // avoids an arcsine per pixel: sin(6°) is .1045 and sin(-12°) is -.2079.
+    const out=this.globeImage.data;
     const sinDec=Math.sin(sun.lat*RAD),cosDec=Math.cos(sun.lat*RAD),cosLam=Math.cos(sun.lon*RAD),sinLam=Math.sin(sun.lon*RAD);
     for(let i=0,count=n*n;i<count;i++){
       const a=g.alpha[i],o=i*4;
       if(!a){out[o+3]=0;continue;}
       const sinAlt=g.sinLat[i]*sinDec+(g.ca[i]*cosLam+g.cb[i]*sinLam)*cosDec;
-      const shade=.17+.83*Math.max(0,Math.min(1,(sinAlt+SIN6)/(SIN6*2)));
-      const gold=Math.max(0,1-Math.abs(sinAlt)/.14),edge=g.edge[i]*36;
-      out[o]=g.base[i*3]*shade+gold*74+edge*.3;
-      out[o+1]=g.base[i*3+1]*shade+gold*46+edge*.85;
-      out[o+2]=g.base[i*3+2]*shade+gold*9+edge;
-      out[o+3]=a*255;
+      // Daylight fades across the terminator rather than at it, and the night side
+      // keeps a little light so land stays readable against water.
+      const lit=Math.max(0,Math.min(1,(sinAlt+.105)/.21));
+      const shade=.14+.86*lit*lit*(3-2*lit);
+      // Squared so the warm band sits close in around the terminator instead of
+      // washing across the whole lit face.
+      const gold=Math.max(0,1-Math.abs(sinAlt)/.085),warm=gold*gold;
+      // Just past the terminator the sky is blue before it is black.
+      const dusk=Math.max(0,1-Math.abs(sinAlt+.155)/.115);
+      const rim=g.edge[i],glow=rim*(14+64*lit);
+      let r=g.base[i*3]*shade+warm*78+dusk*6+glow*.34;
+      let gr=g.base[i*3+1]*shade+warm*46+dusk*14+glow*.72;
+      let b=g.base[i*3+2]*shade+warm*11+dusk*34+glow;
+      // The Sun's reflection, which only water gives back.
+      if(g.water[i]&&sinAlt>.82){const s=(sinAlt-.82)/.18;const spec=s*s*66;r+=spec;gr+=spec*1.02;b+=spec*.82;}
+      out[o]=r;out[o+1]=gr;out[o+2]=b;out[o+3]=a*255;
     }
     gctx.putImageData(this.globeImage,0,0);
-    const halo=ctx.createRadialGradient(cx,cy,R*.92,cx,cy,R*1.3);halo.addColorStop(0,'#86b4d426');halo.addColorStop(1,'#86b4d400');ctx.fillStyle=halo;ctx.beginPath();ctx.arc(cx,cy,R*1.3,0,Math.PI*2);ctx.fill();
+    const halo=ctx.createRadialGradient(cx,cy,R*.94,cx,cy,R*1.24);halo.addColorStop(0,'#8fc0e033');halo.addColorStop(.45,'#6f9fc41a');halo.addColorStop(1,'#6f9fc400');ctx.fillStyle=halo;ctx.beginPath();ctx.arc(cx,cy,R*1.24,0,Math.PI*2);ctx.fill();
     ctx.drawImage(this.globeCanvas,cx-R,cy-R,R*2,R*2);
     // The latitude the galactic centre never climbs above, reported by the API for the
     // selected place. One line says what a paragraph otherwise has to.
