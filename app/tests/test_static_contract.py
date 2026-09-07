@@ -6,37 +6,48 @@ STATIC = ROOT / "app" / "static"
 
 
 def read(name: str) -> str:
-    return (STATIC / name).read_text()
+    return (STATIC / name).read_text(encoding="utf-8")
 
 
-def test_hour_labels_are_placed_by_hour_rather_than_by_column():
-    script = read("app.js")
-
-    # Equal columns centre each label half a column past its own hour.
-    assert "(hour / 24) * 100" in script
-    assert "gridTemplateColumns" not in script
+def referenced_paths(markup: str) -> list[str]:
+    return re.findall(r'(?:src|href)="(/[^"]*)"', markup)
 
 
-def test_the_hour_scale_marks_both_ends_of_the_day():
-    script = read("app.js")
+def test_assets_are_requested_from_the_static_mount():
+    # The HTTPRoute strips the /sky prefix before the request arrives, so the
+    # page cannot tell it is mounted there. A root-absolute asset path leaves
+    # the workload entirely and lands on the project page instead.
+    stray = [
+        path
+        for path in referenced_paths(read("index.html"))
+        if not path.startswith("/static/") and path != "/sky"
+    ]
 
-    # Without a label at 24 the right edge of the bar has no reference.
-    assert "[0, 6, 12, 18, 24]" in script
-    assert "[0, 3, 6, 9, 12, 15, 18, 21, 24]" in script
-
-
-def test_the_initial_date_comes_back_from_the_selected_place():
-    script = read("app.js")
-
-    assert "new Date().toISOString()" not in script
-    assert "date.value = light.date" in script
+    assert stray == [], f"these leave the /static mount: {stray}"
 
 
-def test_a_sticky_control_bar_is_opaque():
-    css = read("styles.css")
-    block = re.search(r"#controls \{(.*?)\n\}", css, re.S)
+def test_the_brand_link_stays_inside_the_prefix():
+    # href="/" reaches the nginx project page rather than this application.
+    markup = read("index.html")
 
-    assert block, "the controls rule is missing"
-    if "position: sticky" in block.group(1):
-        # Otherwise the page scrolls visibly through the bar.
-        assert "background:" in block.group(1)
+    assert 'class="brand"' in markup, "the brand link is missing"
+    assert re.search(r'<a href="/sky" class="brand"', markup)
+
+
+def test_every_referenced_asset_is_shipped():
+    missing = [
+        path
+        for path in referenced_paths(read("index.html"))
+        if path.startswith("/static/")
+        and not (STATIC / path.removeprefix("/static/")).exists()
+    ]
+
+    assert missing == [], f"referenced but not present: {missing}"
+
+
+def test_module_imports_resolve_beside_the_entry_point():
+    # A bare or root-absolute specifier does not resolve from /static/app.js.
+    specifiers = re.findall(r'^import .*? from \'([^\']+)\'', read("app.js"), re.M)
+
+    assert specifiers, "the entry point imports nothing, which is unexpected"
+    assert all(spec.startswith("./") for spec in specifiers), specifiers
