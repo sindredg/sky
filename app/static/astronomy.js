@@ -5,10 +5,30 @@ export const C_KM_S = 299792.458;
 export const DAY_MS = 86400000;
 export const MIN_DATE = Date.UTC(1800, 0, 1);
 export const MAX_DATE = Date.UTC(2050, 0, 1);
+export const MIN_SOLAR_DATE = Date.UTC(-2999, 0, 1);
+export const MAX_SOLAR_DATE = Date.UTC(3000, 0, 1);
 export const RAD = Math.PI / 180;
 export const wrap = (n, base = 360) => ((n % base) + base) % base;
 export const julianDate = date => Number(date) / DAY_MS + 2440587.5;
 export const clampDate = date => Math.max(MIN_DATE, Math.min(MAX_DATE, Number(date)));
+export const clampSolarDate = date => Math.max(MIN_SOLAR_DATE, Math.min(MAX_SOLAR_DATE, Number(date)));
+export const usesLongTermModel = date => Number(date)<MIN_DATE||Number(date)>MAX_DATE;
+// JPL Tables 2a and 2b include the outer-planet correction terms required over 3000 BCE to 3000 CE.
+const longTermElements=[
+  [[.38709843,.20563661,7.00559432,252.25166724,77.45771895,48.33961819],[0,.00002123,-.00590158,149472.67486623,.15940013,-.12214182]],
+  [[.72332102,.00676399,3.39777545,181.9797085,131.76755713,76.67261496],[-.00000026,-.00005107,.00043494,58517.81560260,.05679648,-.27274174]],
+  [[1.00000018,.01673163,-.00054346,100.46691572,102.93005885,-5.11260389],[-.00000003,-.00003661,-.01337178,35999.37306329,.31795260,-.24123856]],
+  [[1.52371243,.09336511,1.85181869,-4.56813164,-23.91744784,49.71320984],[.00000097,.00009149,-.00724757,19140.29934243,.45223625,-.26852431]],
+  [[5.20248019,.04853590,1.29861416,34.33479152,14.27495244,100.29282654],[-.00002864,.00018026,-.00322699,3034.90371757,.18199196,.13024619]],
+  [[9.54149883,.05550825,2.49424102,50.07571329,92.86136063,113.63998702],[-.00003065,-.00032044,.00451969,1222.11494724,.54179478,-.25015002]],
+  [[19.18797948,.04685740,.77298127,314.20276625,172.43404441,73.96250215],[-.00020455,-.00001550,-.00180155,428.49512595,.09266985,.04240589]],
+  [[30.06952752,.00895439,1.77005520,304.22289287,46.68158724,131.78635853],[.00006447,.00000818,.000224,.21846515314e3,.01009938,-.00606302]]
+];
+const outerCorrections={jupiter:[-.00012452,.06064060,-.35635438,38.35125],saturn:[.00025899,-.13434469,.87320147,38.35125],uranus:[.00058331,-.97731848,.17689245,7.67025],neptune:[-.00041348,.68346318,-.10162547,7.67025]};
+export function calendarYear(year,era='CE'){
+  if(!Number.isInteger(year)||year<1||year>3000||!['BCE','CE'].includes(era))throw new RangeError('Choose a year from 1 to 3000 BCE or CE.');
+  const date=new Date(0);date.setUTCFullYear(era==='BCE'?1-year:year,0,1);date.setUTCHours(0,0,0,0);return Number(date);
+}
 const elements = [
   [[.38709927,.20563593,7.00497902,252.25032350,77.45779628,48.33076593],[.00000037,.00001906,-.00594749,149472.67411175,.16047689,-.12534081]],
   [[.72333566,.00677672,3.39467605,181.97909950,131.60246718,76.67984255],[.00000390,-.00004107,-.00078890,58517.81538729,.00268329,-.27769418]],
@@ -41,12 +61,20 @@ export function solveKepler(meanAnomaly, eccentricity) {
   return E;
 }
 export function orbitalElements(planet, date) {
+  if(!Number.isFinite(Number(date))||Number(date)<MIN_SOLAR_DATE||Number(date)>MAX_SOLAR_DATE)throw new RangeError('Date is outside the JPL orbital model.');
   const T = (julianDate(date) - 2451545) / 36525;
-  return planet.elements[0].map((n,i) => n + planet.elements[1][i] * T);
+  const coefficients=usesLongTermModel(date)?longTermElements[planets.indexOf(planet)]:planet.elements;
+  return coefficients[0].map((n,i) => n + coefficients[1][i] * T);
+}
+export function meanAnomaly(planet,date){
+  const values=orbitalElements(planet,date),T=(julianDate(date)-2451545)/36525;
+  let M=values[3]-values[4];
+  if(usesLongTermModel(date)&&outerCorrections[planet.id]){const [b,c,s,f]=outerCorrections[planet.id];M+=b*T*T+c*Math.cos(f*T*RAD)+s*Math.sin(f*T*RAD);}
+  return (wrap(M+180)-180)*RAD;
 }
 export function orbitalPosition(planet, date, eccentricAnomaly) {
   const [a,e,inc,L,peri,node] = orbitalElements(planet,date);
-  const E = eccentricAnomaly ?? solveKepler((wrap(L-peri+180)-180)*RAD,e);
+  const E = eccentricAnomaly ?? solveKepler(meanAnomaly(planet,date),e);
   const x = a*(Math.cos(E)-e), y = a*Math.sqrt(1-e*e)*Math.sin(E);
   const w = (peri-node)*RAD, O=node*RAD, I=inc*RAD;
   const cw=Math.cos(w), sw=Math.sin(w), co=Math.cos(O), so=Math.sin(O), ci=Math.cos(I);

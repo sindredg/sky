@@ -36,5 +36,6 @@ __pycache__/
 # AI Agents
 CLAUDE.md
 AGENTS.md
+agent.md
 CONTEXT.md
 docs/superpowers/
