@@ -89,7 +89,9 @@ def test_place_times_are_requested_for_the_day_on_screen():
 def test_text_from_the_server_is_escaped_before_it_becomes_markup():
     script = read("app.js")
 
-    card = re.search(r'button\.innerHTML=`<span class="mini-planet star".*?`;', script, re.S)
+    card = re.search(
+        r'button\.innerHTML=`<span class="mini-planet star".*?`;', script, re.S
+    )
     assert card, "the place card markup is gone"
     assert "escapeHtml(place.name)" in card.group(0)
 
