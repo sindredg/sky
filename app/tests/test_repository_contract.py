@@ -28,17 +28,11 @@ def test_dependabot_watches_the_pinned_dependencies():
         assert f"package-ecosystem: {ecosystem}" in config
 
 
-def test_no_workflow_still_targets_the_deprecated_node_20_actions():
-    stale = (
-        "actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
-        "azure/login@7184910d9eb2b1c5e48f7073824a90609bb9b6d6",
-        "actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065",
-    )
+def test_the_linter_is_pinned_like_everything_else():
+    requirements = (ROOT / "app" / "requirements-dev.txt").read_text()
 
-    for workflow in (ROOT / ".github" / "workflows").glob("*.yml"):
-        text = workflow.read_text()
-        for pin in stale:
-            assert pin not in text, f"{workflow.name} still pins {pin}"
+    # ruff.toml and the README both assume a ruff that nothing installed.
+    assert "ruff==" in requirements
 
 
 def test_warnings_fail_the_build():
@@ -62,14 +56,16 @@ def test_the_readme_counts_the_places_correctly():
 
     readme = (ROOT / "README.md").read_text()
 
-    # The count drifted from nine to seventeen without the README noticing.
+    # The count has drifted twice without the README noticing: nine to
+    # seventeen, then to thirty-seven while no CI was running this test.
     assert f"{len(PLACES)} places" in readme
 
 
 def test_the_readme_links_the_running_service():
     readme = (ROOT / "README.md").read_text()
 
-    assert "azurecontainerapps.io" in readme
+    # The cluster in k8-lab serves this application under the /sky prefix.
+    assert "https://sindrg.com/sky" in readme
     assert "Nothing is deployed yet" not in readme
 
 

@@ -1,18 +1,26 @@
 # Sky
 
-The application calculates sunlight and moon data for 23 places. It handles
+The application calculates sunlight and moon data for 37 places. It handles
 midnight sun and polar night by sampling altitude once per minute instead of
 assuming the sun crosses the horizon.
 
 No external API, no database, no API key. The same question returns the same
 answer.
 
+## Live
+
+[sindrg.com/sky](https://sindrg.com/sky), served from a GKE cluster that builds
+this repository at a pinned commit. The cluster and its delivery pipeline live
+in [k8-lab](https://github.com/sindredg/k8-lab); this repository is the
+application alone.
+
 ## Features
 
 - Sunrise, sunset, golden hour, blue hour, and maximum solar altitude
 - Moon phase, illumination, moonrise, and moonset
 - Solar and lunar eclipse occurrence
-- Website with a calculated light bar, dark mode, and a 375px mobile layout
+- Browser observatory with four views: the solar system, the night sky,
+  a globe of the places above, and the scale of the universe
 - Internal JSON API, health endpoint, and version endpoint
 
 ## Run locally
@@ -49,6 +57,7 @@ Stop the local stack with `docker compose down`.
     .venv/bin/python -m pytest app/tests -q
     .venv/bin/ruff check app
     .venv/bin/ruff format --check app
+    node --test app/tests/observatory.test.mjs app/tests/frontend/astronomy.test.js
     scripts/container-smoke.sh
 
 ## Calculation limits
@@ -67,15 +76,16 @@ sampling and simplified horizon corrections.
 The arithmetic is permanent. The delivery is not, and the distinction is worth
 stating: daylight saving rules are political rather than astronomical, so IANA
 timezone data genuinely needs updating, and the runtime dependencies and base
-image need security patches. Dependabot watches all three.
+image need security patches. All three are pinned, and Dependabot watches all
+three so a pin cannot go quietly stale.
 
 Eclipse results report occurrence and kind. Path, magnitude, and local
 visibility require full ephemerides and are outside the current scope.
 
 ## Review limits
 
-Pull requests preserve a reviewable history and required checks enforce the
-automated contracts. This is an owner-maintained project, so those pull
+Pull requests preserve a reviewable history and CI enforces the automated
+contracts. This is an owner-maintained project, so those pull
 requests are not independent peer review unless another reviewer participates.
 Green CI demonstrates that the checked contracts pass. It is not external
 validation of the architecture or astronomy.

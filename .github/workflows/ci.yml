@@ -1,0 +1,53 @@
+# Validation for every pull request and push to main. Needs no credential.
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python:
+    name: Lint and test
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # The image is read from the Dockerfile rather than named again here, so
+      # a base image bump cannot ship a runtime the tests never ran on.
+      - name: Lint and test on the runtime the image ships
+        run: |
+          image=$(grep -oP '^FROM \K\S+' Dockerfile)
+          echo "Running against ${image}"
+          docker run --rm --volume "$PWD":/workspace --workdir /workspace \
+            --env PYTHONDONTWRITEBYTECODE=1 "$image" sh -ceu '
+              pip install --quiet --no-cache-dir --disable-pip-version-check \
+                -r app/requirements-dev.txt
+              ruff check app
+              ruff format --check app
+              python -m pytest app/tests -q
+            '
+
+  frontend:
+    name: Frontend tests
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # node:test is in the standard library, so this installs nothing.
+      - name: Run the browser astronomy suites
+        run: |
+          node --version
+          node --test app/tests/observatory.test.mjs app/tests/frontend/astronomy.test.js
