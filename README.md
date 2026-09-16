@@ -76,16 +76,16 @@ sampling and simplified horizon corrections.
 The arithmetic is permanent. The delivery is not, and the distinction is worth
 stating: daylight saving rules are political rather than astronomical, so IANA
 timezone data genuinely needs updating, and the runtime dependencies and base
-image need security patches. All three are pinned, so each one needs a
-deliberate bump.
+image need security patches. All three are pinned, and Dependabot watches all
+three so a pin cannot go quietly stale.
 
 Eclipse results report occurrence and kind. Path, magnitude, and local
 visibility require full ephemerides and are outside the current scope.
 
 ## Review limits
 
-Pull requests preserve a reviewable history and required checks enforce the
-automated contracts. This is an owner-maintained project, so those pull
+Pull requests preserve a reviewable history and CI enforces the automated
+contracts. This is an owner-maintained project, so those pull
 requests are not independent peer review unless another reviewer participates.
 Green CI demonstrates that the checked contracts pass. It is not external
 validation of the architecture or astronomy.

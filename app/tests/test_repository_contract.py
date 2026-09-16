@@ -20,6 +20,21 @@ def test_the_agent_notes_stay_ignored():
         assert note in rules
 
 
+def test_dependabot_watches_the_pinned_dependencies():
+    config = (ROOT / ".github" / "dependabot.yml").read_text()
+
+    # SHA pins never float, so nothing surfaces an update without this.
+    for ecosystem in ("github-actions", "pip", "docker"):
+        assert f"package-ecosystem: {ecosystem}" in config
+
+
+def test_the_linter_is_pinned_like_everything_else():
+    requirements = (ROOT / "app" / "requirements-dev.txt").read_text()
+
+    # ruff.toml and the README both assume a ruff that nothing installed.
+    assert "ruff==" in requirements
+
+
 def test_warnings_fail_the_build():
     config = (ROOT / "pytest.ini").read_text()
 

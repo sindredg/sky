@@ -80,3 +80,11 @@ def runtime_series() -> str:
 def test_the_dockerfile_pins_a_specific_patch_release():
     # A series tag such as python:3.12-slim would move underneath the digest.
     assert runtime_series().count(".") == 1
+
+
+def test_ci_derives_the_runtime_from_the_dockerfile():
+    workflow = read(".github/workflows/ci.yml")
+
+    # Naming a version here lets a base image bump ship an untested runtime.
+    assert "grep -oP '^FROM \\K\\S+' Dockerfile" in workflow
+    assert "python-version:" not in workflow
