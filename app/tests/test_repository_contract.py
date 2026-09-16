@@ -41,14 +41,16 @@ def test_the_readme_counts_the_places_correctly():
 
     readme = (ROOT / "README.md").read_text()
 
-    # The count drifted from nine to seventeen without the README noticing.
+    # The count has drifted twice without the README noticing: nine to
+    # seventeen, then to thirty-seven while no CI was running this test.
     assert f"{len(PLACES)} places" in readme
 
 
 def test_the_readme_links_the_running_service():
     readme = (ROOT / "README.md").read_text()
 
-    assert "azurecontainerapps.io" in readme
+    # The cluster in k8-lab serves this application under the /sky prefix.
+    assert "https://sindrg.com/sky" in readme
     assert "Nothing is deployed yet" not in readme
 
 
