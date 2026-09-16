@@ -14,10 +14,6 @@ README.md
 app/tests
 docs
 scripts
-terraform
-**/.terraform
-*.tfstate*
-*.tfplan
 .env
 .env.*
 .vscode

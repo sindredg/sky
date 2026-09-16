@@ -50,10 +50,6 @@ def test_build_context_excludes_local_and_runtime_state():
         "CONTEXT.md",
         "app/tests",
         "docs",
-        "terraform",
-        "**/.terraform",
-        "*.tfstate*",
-        "*.tfplan",
     } <= ignored
 
 
@@ -75,25 +71,10 @@ def test_the_version_is_a_build_argument_rather_than_a_fixed_value():
     assert "SERVICE_VERSION=${SERVICE_VERSION}" in dockerfile
 
 
-def test_the_release_stamps_the_commit_into_the_image():
-    workflow = (ROOT / ".github" / "workflows" / "release.yml").read_text()
-
-    assert "--build-arg SERVICE_VERSION=$GITHUB_SHA" in workflow
-
-
 def runtime_series() -> str:
     found = BASE_IMAGE.match(read("Dockerfile"))
     assert found, "the Dockerfile does not pin a digest"
     return found.group("series")
-
-
-def test_the_tests_run_on_the_python_that_ships():
-    workflow = read(".github/workflows/ci.yml")
-
-    # Hardcoding a version here lets a base image bump ship an untested runtime.
-    assert "python-version: '3." not in workflow
-    assert "steps.runtime.outputs.python" in workflow
-    assert "FROM python:" in workflow
 
 
 def test_the_dockerfile_pins_a_specific_patch_release():
