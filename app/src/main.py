@@ -22,6 +22,31 @@ app = FastAPI(
     openapi_url=None,
 )
 
+# The application knows what it loads; the cluster serving it does not.
+CONTENT_SECURITY_POLICY = "; ".join(
+    [
+        "default-src 'self'",
+        "script-src 'self'",
+        # style.css imports Google Fonts, and the page carries style attributes.
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+        "font-src 'self' https://fonts.gstatic.com",
+        "img-src 'self'",
+        "connect-src 'self'",
+        "frame-ancestors 'none'",
+        "base-uri 'none'",
+        # Three forms are handled in the browser and submit nowhere else.
+        "form-action 'self'",
+        "object-src 'none'",
+    ]
+)
+
+
+@app.middleware("http")
+async def content_security_policy(request, call_next):
+    response = await call_next(request)
+    response.headers["Content-Security-Policy"] = CONTENT_SECURITY_POLICY
+    return response
+
 
 def _iso(value):
     return value.isoformat(timespec="minutes") if isinstance(value, datetime) else None
