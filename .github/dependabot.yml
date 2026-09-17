@@ -6,13 +6,27 @@ updates:
     directory: /app
     schedule:
       interval: weekly
+    # Squash merge puts this on main, so it carries a conventional prefix.
+    commit-message:
+      prefix: chore
+    # One pull request a week rather than one per dependency.
+    groups:
+      python:
+        patterns: ["*"]
 
   - package-ecosystem: docker
     directory: /
     schedule:
       interval: weekly
+    commit-message:
+      prefix: chore
 
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
+    commit-message:
+      prefix: ci
+    groups:
+      actions:
+        patterns: ["*"]
