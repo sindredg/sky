@@ -14,9 +14,9 @@ __pycache__/
 .idea/
 .DS_Store
 
-# AI Agents
+# AI Agents. AGENTS.md is tracked on purpose: untracked rules cannot be
+# reviewed, diffed, or read on a fresh clone.
 CLAUDE.md
-AGENTS.md
 agent.md
 CONTEXT.md
 docs/superpowers/
